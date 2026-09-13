@@ -1,0 +1,6 @@
+{
+  "name": "Las 5 Estrellas de Jonathan",
+  "description": "Una aventura interactiva 3D con estética house y nostalgia retro para el cumpleaños de Jonathan (JONAMS): recorre un festival al atardecer, escucha su música y descubre una carta llena de amor y recuerdos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
