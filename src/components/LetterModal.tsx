@@ -23,7 +23,7 @@ export const LetterModal: React.FC<LetterModalProps> = ({ chapter, onContinue, i
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.85, opacity: 0 }}
         transition={{ type: 'spring', damping: 22, stiffness: 280 }}
-        className="w-full max-w-xl house-panel rounded-3xl p-6 md:p-8 text-slate-100 relative my-auto shadow-2xl border border-amber-400/40"
+        className="w-full max-w-xl max-h-[94vh] overflow-y-auto house-panel rounded-3xl p-4 sm:p-6 md:p-8 text-slate-100 relative my-auto shadow-2xl border border-amber-400/40"
       >
         {/* Top Floating Star Badge */}
         <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-slate-950 font-game px-5 py-1.5 rounded-full shadow-lg border border-amber-200">

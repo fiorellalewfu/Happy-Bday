@@ -92,3 +92,17 @@
   border-radius: 9999px;
 }
 
+/* Mobile & Touch Controls Optimizations */
+.touch-control-btn {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pb-safe {
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 1.25rem));
+}
+
+

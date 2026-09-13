@@ -43,7 +43,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   };
 
   return (
-    <div className="absolute inset-x-0 top-3 pointer-events-none z-30 px-3 md:px-6 flex flex-col gap-2 select-none">
+    <div className="absolute inset-x-0 top-0 pt-[max(0.75rem,env(safe-area-inset-top,0.75rem))] pointer-events-none z-30 px-3 md:px-6 flex flex-col gap-2 select-none">
       <div className="flex items-center justify-between gap-2">
         {/* Star Counter & Super DJ Badge */}
         <div className="flex items-center gap-2">
