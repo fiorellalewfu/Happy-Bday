@@ -3,9 +3,10 @@ import { ArrowLeft, ArrowRight, ArrowUp } from 'lucide-react';
 
 interface TouchControlsProps {
   onControlChange: (control: 'left' | 'right' | 'jump', active: boolean) => void;
+  canFly?: boolean;
 }
 
-export const TouchControls: React.FC<TouchControlsProps> = ({ onControlChange }) => {
+export const TouchControls: React.FC<TouchControlsProps> = ({ onControlChange, canFly }) => {
   const handleTouch = (
     control: 'left' | 'right' | 'jump',
     active: boolean,
@@ -49,21 +50,32 @@ export const TouchControls: React.FC<TouchControlsProps> = ({ onControlChange })
         </button>
       </div>
 
-      {/* Jump Button */}
-      <div className="pointer-events-auto">
+      {/* Jump / Fly Button */}
+      <div className="pointer-events-auto flex flex-col items-center">
+        {canFly && (
+          <span className="text-[10px] font-bold text-yellow-300 uppercase tracking-widest font-display animate-pulse mb-1 bg-slate-900/80 px-2 py-0.5 rounded-full border border-yellow-400/40">
+            ¡Mantén para Volar! ✨
+          </span>
+        )}
         <button
           id="btn-touch-jump"
-          aria-label="Saltar"
+          aria-label={canFly ? 'Volar y Saltar' : 'Saltar'}
           onTouchStart={(e) => handleTouch('jump', true, e)}
           onTouchEnd={(e) => handleTouch('jump', false, e)}
           onTouchCancel={(e) => handleTouch('jump', false, e)}
           onMouseDown={(e) => handleTouch('jump', true, e)}
           onMouseUp={(e) => handleTouch('jump', false, e)}
           onMouseLeave={(e) => handleTouch('jump', false, e)}
-          className="w-20 h-20 sm:w-22 sm:h-22 bg-gradient-to-tr from-amber-500 to-yellow-400 active:from-yellow-400 active:to-amber-500 text-slate-900 rounded-3xl border-3 border-white flex flex-col items-center justify-center shadow-xl active:scale-90 transition-transform cursor-pointer font-game"
+          className={`w-20 h-20 sm:w-22 sm:h-22 ${
+            canFly
+              ? 'bg-gradient-to-tr from-yellow-400 via-amber-300 to-white text-slate-950 shadow-amber-300/60 shadow-2xl border-4 border-yellow-200 animate-pulse'
+              : 'bg-gradient-to-tr from-amber-500 to-yellow-400 active:from-yellow-400 active:to-amber-500 text-slate-900 border-3 border-white shadow-xl'
+          } rounded-3xl flex flex-col items-center justify-center active:scale-90 transition-transform cursor-pointer font-game`}
         >
           <ArrowUp className="w-8 h-8 stroke-[3]" />
-          <span className="text-xs uppercase tracking-wider font-bold -mt-1">Saltar</span>
+          <span className="text-xs uppercase tracking-wider font-bold -mt-1">
+            {canFly ? 'Volar' : 'Saltar'}
+          </span>
         </button>
       </div>
     </div>

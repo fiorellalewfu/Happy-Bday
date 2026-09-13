@@ -1,13 +1,22 @@
 import * as THREE from 'three';
 import { LetterChapter, EasterEgg } from '../types';
-import { playJumpSound, playStarSound, playEasterEggSound } from '../audio/soundEffects';
+import {
+  playJumpSound,
+  playStarSound,
+  playEasterEggSound,
+  playSuperStarEvolutionSound,
+  playCelestialFanfare,
+  playCelestialFlightSound
+} from '../audio/soundEffects';
 import { setSoundCloudVolume } from '../audio/soundcloudManager';
 
 export interface GameEngineCallbacks {
-  onStarCollect: (starIndex: number, chapter: LetterChapter) => void;
+  onStarCollect: (starIndex: number, chapter: LetterChapter, isSuperDJ: boolean, canFly: boolean) => void;
   onEasterEggFound: (egg: EasterEgg) => void;
   onReachGoal: () => void;
   onStarCountUpdate: (count: number) => void;
+  onEvolution?: () => void;
+  onFlightUnlocked?: () => void;
 }
 
 export class RetroPlatformerEngine {
@@ -30,6 +39,33 @@ export class RetroPlatformerEngine {
   private celebrationTimer = 0;
   private runCycle = 0;
 
+  // Flight ability & Celestial Wings (Unlocked at Star 4)
+  private canFly = false;
+  private isFlying = false;
+  private flightWingsGroup!: THREE.Group;
+  private wingLeft!: THREE.Group;
+  private wingRight!: THREE.Group;
+  private guardianOrbsGroup!: THREE.Group;
+  private guardianOrbA!: THREE.Mesh;
+  private guardianOrbB!: THREE.Mesh;
+  private celestialTrailSpawnTimer = 0;
+
+  // Super DJ Evolution State (Mario Super Star Power!)
+  private isSuperDJ = false;
+  private superDJTimer = 0;
+  private headphonesGroup!: THREE.Group;
+  private superStarAuraGroup!: THREE.Group;
+  private auraShieldA!: THREE.Mesh;
+  private auraShieldB!: THREE.Mesh;
+  private auraShieldMatA!: THREE.MeshBasicMaterial;
+  private auraShieldMatB!: THREE.MeshBasicMaterial;
+  private auraCrownStar!: THREE.Mesh;
+  private auraCrownMat!: THREE.MeshStandardMaterial;
+  private auraPointLight!: THREE.PointLight;
+  private trailParticles: { mesh: THREE.Mesh; life: number; maxLife: number; vx: number; vy: number; rotSpeed: number }[] = [];
+  private trailParticlePool: THREE.Mesh[] = [];
+  private trailSpawnTimer = 0;
+
   // Meshes for animation
   private playerLeftLeg!: THREE.Mesh;
   private playerRightLeg!: THREE.Mesh;
@@ -48,15 +84,30 @@ export class RetroPlatformerEngine {
   // Easter Eggs
   private easterEggs: { data: EasterEgg; mesh: THREE.Group; found: boolean }[] = [];
 
-  // Celestial Lights (Parents - Mom & Dad)
+  // Celestial Lights (Parents - Mom & Dad) Destellos, Flares & Beacons
   private parentLightA!: THREE.PointLight;
   private parentLightB!: THREE.PointLight;
-  private parentOrbA!: THREE.Mesh;
-  private parentOrbB!: THREE.Mesh;
+  private parentOrbA!: THREE.Group;
+  private parentOrbB!: THREE.Group;
+  private parentFlareRaysA: THREE.Mesh[] = [];
+  private parentFlareRaysB: THREE.Mesh[] = [];
+  private parentGodRayA!: THREE.Mesh;
+  private parentGodRayB!: THREE.Mesh;
+  private parentHaloRingsA: THREE.Mesh[] = [];
+  private parentHaloRingsB: THREE.Mesh[] = [];
+  private parentOrbitingSparks: { mesh: THREE.Mesh; parentGroup: THREE.Group; angle: number; speed: number; radius: number; heightOffset: number }[] = [];
 
   // Laser beams & concert spotlights
   private lasers: { mesh: THREE.Mesh; baseRotZ: number; speed: number; phase: number }[] = [];
   private speakerCones: THREE.Mesh[] = [];
+
+  // Final DJ Set & Mixing State (Mainstage Goal Reached)
+  private isFinalSetDJing = false;
+  private djPlatterLeft!: THREE.Mesh;
+  private djPlatterRight!: THREE.Mesh;
+  private mixerLedBars: THREE.Mesh[] = [];
+  private spectrumBars: THREE.Mesh[] = [];
+  private stageStrobeLight!: THREE.PointLight;
 
   // Environment elements
   private ambientLight!: THREE.AmbientLight;
@@ -100,6 +151,7 @@ export class RetroPlatformerEngine {
     this.playerGroup = new THREE.Group();
     this.playerShadow = this.createShadowMesh();
     this.buildDJPlayer();
+    this.setupTrailParticles();
     this.buildLevel(chapters, easterEggsList);
     this.buildCelestialParents();
     this.buildBackgroundScenery();
@@ -252,12 +304,15 @@ export class RetroPlatformerEngine {
     shades.position.set(0, 0.08, 0.42);
     this.playerHead.add(shades);
 
-    // DJ HEADPHONES (Over ears / resting on head)
+    // DJ HEADPHONES (Equipped when evolving to Super DJ!)
+    this.headphonesGroup = new THREE.Group();
+    this.headphonesGroup.visible = false;
+
     const bandGeo = new THREE.TorusGeometry(0.48, 0.06, 6, 16, Math.PI);
     const bandMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.7 });
     const band = new THREE.Mesh(bandGeo, bandMat);
     band.position.set(0, 0.45, 0);
-    this.playerHead.add(band);
+    this.headphonesGroup.add(band);
 
     // Glowing DJ Earcups (LED amber house rings)
     const cupGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.12, 12);
@@ -278,8 +333,141 @@ export class RetroPlatformerEngine {
     cupR.position.set(0.46, 0.1, 0);
 
     this.headphoneCups = [cupL, cupR];
-    this.playerHead.add(cupL, cupR);
+    this.headphonesGroup.add(cupL, cupR);
+    this.playerHead.add(this.headphonesGroup);
     this.playerGroup.add(this.playerHead);
+
+    // SUPER STAR DJ AURA (Mario Invincible Star power aesthetic)
+    this.superStarAuraGroup = new THREE.Group();
+    this.superStarAuraGroup.visible = false;
+
+    // Prismatic Rotating Ring A
+    const ringGeoA = new THREE.TorusGeometry(1.26, 0.045, 8, 32);
+    this.auraShieldMatA = new THREE.MeshBasicMaterial({
+      color: 0xfacc15,
+      transparent: true,
+      opacity: 0.85,
+      wireframe: true,
+      blending: THREE.AdditiveBlending
+    });
+    this.auraShieldA = new THREE.Mesh(ringGeoA, this.auraShieldMatA);
+    this.auraShieldA.position.y = 1.1;
+
+    // Prismatic Rotating Ring B (cross angle)
+    const ringGeoB = new THREE.TorusGeometry(1.38, 0.035, 8, 32);
+    this.auraShieldMatB = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.8,
+      wireframe: true,
+      blending: THREE.AdditiveBlending
+    });
+    this.auraShieldB = new THREE.Mesh(ringGeoB, this.auraShieldMatB);
+    this.auraShieldB.rotation.x = Math.PI / 2;
+    this.auraShieldB.position.y = 1.1;
+
+    // Hovering Diamond Star Crown above head
+    const crownStarGeo = new THREE.OctahedronGeometry(0.34, 0);
+    this.auraCrownMat = new THREE.MeshStandardMaterial({
+      color: 0xfacc15,
+      emissive: 0xf59e0b,
+      emissiveIntensity: 0.95,
+      metalness: 0.9,
+      roughness: 0.1
+    });
+    this.auraCrownStar = new THREE.Mesh(crownStarGeo, this.auraCrownMat);
+    this.auraCrownStar.position.set(0, 2.75, 0);
+
+    // Dynamic light radiating on platforms & world around player
+    this.auraPointLight = new THREE.PointLight(0xfacc15, 0, 10);
+    this.auraPointLight.position.set(0, 1.6, 0);
+
+    this.superStarAuraGroup.add(this.auraShieldA, this.auraShieldB, this.auraCrownStar, this.auraPointLight);
+    this.playerGroup.add(this.superStarAuraGroup);
+
+    // CELESTIAL WINGS OF LIGHT (Unlocked at Star 4 - Dos Luces en el Cielo)
+    this.flightWingsGroup = new THREE.Group();
+    this.flightWingsGroup.position.set(0, 1.45, -0.32);
+    this.flightWingsGroup.visible = false;
+
+    const wingMat = new THREE.MeshBasicMaterial({
+      color: 0xfef08a,
+      transparent: true,
+      opacity: 0.85,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide
+    });
+    const wingCoreMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.95,
+      blending: THREE.AdditiveBlending
+    });
+
+    // Left Wing
+    this.wingLeft = new THREE.Group();
+    const featherGeo1 = new THREE.ConeGeometry(0.24, 1.35, 4);
+    featherGeo1.rotateZ(-Math.PI / 3);
+    const wL1 = new THREE.Mesh(featherGeo1, wingMat);
+    wL1.position.set(-0.65, 0.45, 0);
+
+    const featherGeo2 = new THREE.ConeGeometry(0.2, 1.1, 4);
+    featherGeo2.rotateZ(-Math.PI / 4);
+    const wL2 = new THREE.Mesh(featherGeo2, wingMat);
+    wL2.position.set(-0.55, 0.1, 0);
+
+    const featherGeo3 = new THREE.ConeGeometry(0.16, 0.85, 4);
+    featherGeo3.rotateZ(-Math.PI / 6);
+    const wL3 = new THREE.Mesh(featherGeo3, wingMat);
+    wL3.position.set(-0.42, -0.22, 0);
+
+    const wingRootL = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), wingCoreMat);
+    wingRootL.position.set(-0.15, 0.1, 0);
+
+    this.wingLeft.add(wL1, wL2, wL3, wingRootL);
+
+    // Right Wing
+    this.wingRight = new THREE.Group();
+    const featherGeoR1 = new THREE.ConeGeometry(0.24, 1.35, 4);
+    featherGeoR1.rotateZ(Math.PI / 3);
+    const wR1 = new THREE.Mesh(featherGeoR1, wingMat);
+    wR1.position.set(0.65, 0.45, 0);
+
+    const featherGeoR2 = new THREE.ConeGeometry(0.2, 1.1, 4);
+    featherGeoR2.rotateZ(Math.PI / 4);
+    const wR2 = new THREE.Mesh(featherGeoR2, wingMat);
+    wR2.position.set(0.55, 0.1, 0);
+
+    const featherGeoR3 = new THREE.ConeGeometry(0.16, 0.85, 4);
+    featherGeoR3.rotateZ(Math.PI / 6);
+    const wR3 = new THREE.Mesh(featherGeoR3, wingMat);
+    wR3.position.set(0.42, -0.22, 0);
+
+    const wingRootR = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), wingCoreMat);
+    wingRootR.position.set(0.15, 0.1, 0);
+
+    this.wingRight.add(wR1, wR2, wR3, wingRootR);
+    this.flightWingsGroup.add(this.wingLeft, this.wingRight);
+    this.playerGroup.add(this.flightWingsGroup);
+
+    // MINI GUARDIAN ORBS (Mom & Dad protecting and accompanying Jonathan in flight)
+    this.guardianOrbsGroup = new THREE.Group();
+    this.guardianOrbsGroup.visible = false;
+
+    const miniOrbGeo = new THREE.SphereGeometry(0.18, 12, 12);
+    const miniOrbMatA = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+    const miniOrbMatB = new THREE.MeshBasicMaterial({ color: 0xffedd5 });
+
+    this.guardianOrbA = new THREE.Mesh(miniOrbGeo, miniOrbMatA);
+    const miniLightA = new THREE.PointLight(0xfef08a, 1.5, 6);
+    this.guardianOrbA.add(miniLightA);
+
+    this.guardianOrbB = new THREE.Mesh(miniOrbGeo, miniOrbMatB);
+    const miniLightB = new THREE.PointLight(0xffedd5, 1.5, 6);
+    this.guardianOrbB.add(miniLightB);
+
+    this.guardianOrbsGroup.add(this.guardianOrbA, this.guardianOrbB);
+    this.playerGroup.add(this.guardianOrbsGroup);
 
     // Limbs - Legs (Dark Streetwear)
     const legGeo = new THREE.BoxGeometry(0.32, 0.65, 0.36);
@@ -745,36 +933,147 @@ export class RetroPlatformerEngine {
 
   private buildCelestialParents() {
     // Two radiant guardian lights in the sky near Star 4 (X ≈ 116)
-    // Symbolizing Mom & Dad accompanying Jonathan with warmth
-    const orbGeo = new THREE.SphereGeometry(0.65, 16, 16);
-    const orbMat = new THREE.MeshBasicMaterial({
-      color: 0xfffbeb,
-      transparent: true,
-      opacity: 0.95
-    });
+    // Symbolizing Mom & Dad accompanying Jonathan with a radiant super-power aura & destellos
+    this.parentOrbA = new THREE.Group();
+    this.parentOrbA.position.set(113, 17.5, -3.5);
 
-    this.parentOrbA = new THREE.Mesh(orbGeo, orbMat);
-    this.parentOrbA.position.set(113, 16.8, -3.5);
-    this.parentLightA = new THREE.PointLight(0xfef08a, 3.2, 20);
-    this.parentOrbA.add(this.parentLightA);
+    this.parentOrbB = new THREE.Group();
+    this.parentOrbB.position.set(118, 18.5, -3.0);
 
-    this.parentOrbB = new THREE.Mesh(orbGeo, orbMat);
-    this.parentOrbB.position.set(118, 17.8, -3.0);
-    this.parentLightB = new THREE.PointLight(0xffedd5, 3.2, 20);
-    this.parentOrbB.add(this.parentLightB);
+    const createParentBeacon = (
+      group: THREE.Group,
+      colorHex: number,
+      flareList: THREE.Mesh[],
+      haloList: THREE.Mesh[],
+      isMom: boolean
+    ) => {
+      // 1. Core brilliant star crystal
+      const coreGeo = new THREE.SphereGeometry(0.72, 20, 20);
+      const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      const core = new THREE.Mesh(coreGeo, coreMat);
+      group.add(core);
 
-    // Radiant celestial halo rings
-    const auraGeo = new THREE.RingGeometry(0.8, 1.4, 24);
-    const auraMat = new THREE.MeshBasicMaterial({
-      color: 0xfef08a,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.5
-    });
-    const auraA = new THREE.Mesh(auraGeo, auraMat);
-    const auraB = new THREE.Mesh(auraGeo, auraMat);
-    this.parentOrbA.add(auraA);
-    this.parentOrbB.add(auraB);
+      // 2. Glowing outer mantle
+      const mantleGeo = new THREE.SphereGeometry(1.1, 16, 16);
+      const mantleMat = new THREE.MeshBasicMaterial({
+        color: colorHex,
+        transparent: true,
+        opacity: 0.6,
+        blending: THREE.AdditiveBlending
+      });
+      const mantle = new THREE.Mesh(mantleGeo, mantleMat);
+      group.add(mantle);
+
+      // 3. Destellos Estelares en Cruz (Starburst Lens Flares / Super Power Rays)
+      const flareMat = new THREE.MeshBasicMaterial({
+        color: colorHex,
+        transparent: true,
+        opacity: 0.85,
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+
+      // Horizontal ray
+      const rayH = new THREE.Mesh(new THREE.PlaneGeometry(6.8, 0.42), flareMat);
+      // Vertical ray
+      const rayV = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 6.8), flareMat);
+      // Diagonal 45 deg ray
+      const rayD1 = new THREE.Mesh(new THREE.PlaneGeometry(4.8, 0.32), flareMat);
+      rayD1.rotation.z = Math.PI / 4;
+      // Diagonal -45 deg ray
+      const rayD2 = new THREE.Mesh(new THREE.PlaneGeometry(4.8, 0.32), flareMat);
+      rayD2.rotation.z = -Math.PI / 4;
+
+      group.add(rayH, rayV, rayD1, rayD2);
+      flareList.push(rayH, rayV, rayD1, rayD2);
+
+      // 4. Coronal Aura Rings (expanding super-power heartbeats)
+      const ringMat1 = new THREE.MeshBasicMaterial({
+        color: colorHex,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.5,
+        blending: THREE.AdditiveBlending
+      });
+      const ringMat2 = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.35,
+        blending: THREE.AdditiveBlending
+      });
+
+      const ring1 = new THREE.Mesh(new THREE.RingGeometry(1.0, 2.2, 32), ringMat1);
+      const ring2 = new THREE.Mesh(new THREE.RingGeometry(2.0, 3.6, 32), ringMat2);
+      group.add(ring1, ring2);
+      haloList.push(ring1, ring2);
+
+      // 5. Descending God-Ray (Beam of heavenly light down to the platform below)
+      const godRayGeo = new THREE.CylinderGeometry(0.4, 4.8, 22, 16, 1, true);
+      const godRayMat = new THREE.MeshBasicMaterial({
+        color: colorHex,
+        transparent: true,
+        opacity: 0.22,
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide,
+        depthWrite: false
+      });
+      const godRay = new THREE.Mesh(godRayGeo, godRayMat);
+      godRay.position.y = -10.5;
+      group.add(godRay);
+
+      if (isMom) {
+        this.parentGodRayA = godRay;
+      } else {
+        this.parentGodRayB = godRay;
+      }
+
+      // 6. Orbiting Guardian Sparks
+      for (let sp = 0; sp < 4; sp++) {
+        const sparkGeo = new THREE.OctahedronGeometry(0.18, 0);
+        const sparkMat = new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.9,
+          blending: THREE.AdditiveBlending
+        });
+        const sparkMesh = new THREE.Mesh(sparkGeo, sparkMat);
+        group.add(sparkMesh);
+
+        this.parentOrbitingSparks.push({
+          mesh: sparkMesh,
+          parentGroup: group,
+          angle: (sp * Math.PI) / 2,
+          speed: 1.4 + sp * 0.4,
+          radius: 1.6 + (sp % 2) * 0.7,
+          heightOffset: (sp - 1.5) * 0.35
+        });
+      }
+
+      // 7. Dynamic High-Reach Point Light with Destellos
+      const pLight = new THREE.PointLight(colorHex, 4.2, 35);
+      group.add(pLight);
+      return pLight;
+    };
+
+    // Mamá (Golden Celestial Warmth)
+    this.parentLightA = createParentBeacon(
+      this.parentOrbA,
+      0xfef08a,
+      this.parentFlareRaysA,
+      this.parentHaloRingsA,
+      true
+    );
+
+    // Papá (Diamond Pearl Radiance)
+    this.parentLightB = createParentBeacon(
+      this.parentOrbB,
+      0xffedd5,
+      this.parentFlareRaysB,
+      this.parentHaloRingsB,
+      false
+    );
 
     this.scene.add(this.parentOrbA, this.parentOrbB);
   }
@@ -814,6 +1113,233 @@ export class RetroPlatformerEngine {
     }
 
     stageGroup.add(pillarL, pillarR, roofTruss, signBoard);
+
+    // ==========================================
+    // MAINSTAGE DJ BOOTH & SET LIST DESK
+    // ==========================================
+    const boothDeskMat = new THREE.MeshStandardMaterial({
+      color: 0x0f172a, // Matte dark carbon finish
+      roughness: 0.35,
+      metalness: 0.7
+    });
+
+    // DJ Desk Base (Table)
+    const deskBase = new THREE.Mesh(
+      new THREE.BoxGeometry(3.6, 1.05, 0.9),
+      boothDeskMat
+    );
+    deskBase.position.set(0, 0.525, 0.8);
+    stageGroup.add(deskBase);
+
+    // Front illuminated LED fascia / sign board
+    const frontFascia = new THREE.Mesh(
+      new THREE.BoxGeometry(3.3, 0.55, 0.05),
+      new THREE.MeshStandardMaterial({
+        color: 0x09090b,
+        emissive: 0x1e1b4b,
+        emissiveIntensity: 0.5
+      })
+    );
+    frontFascia.position.set(0, 0.55, 1.27);
+    stageGroup.add(frontFascia);
+
+    // Neon Accent Trim on Desk
+    const deskTrim = new THREE.Mesh(
+      new THREE.BoxGeometry(3.5, 0.06, 0.08),
+      new THREE.MeshBasicMaterial({ color: 0xf59e0b })
+    );
+    deskTrim.position.set(0, 1.02, 1.26);
+    stageGroup.add(deskTrim);
+
+    // Audio Spectrum Visualizer Bars along the front fascia
+    this.spectrumBars = [];
+    const specColors = [0x10b981, 0x10b981, 0x06b6d4, 0x06b6d4, 0xfacc15, 0xfacc15, 0xf59e0b, 0xf97316, 0xef4444, 0xec4899];
+    for (let i = 0; i < 10; i++) {
+      const bx = -1.2 + i * 0.265;
+      const bar = new THREE.Mesh(
+        new THREE.BoxGeometry(0.16, 0.35, 0.04),
+        new THREE.MeshBasicMaterial({ color: specColors[i] })
+      );
+      bar.position.set(bx, 0.55, 1.3);
+      this.spectrumBars.push(bar);
+      stageGroup.add(bar);
+    }
+
+    // ==========================================
+    // DJ EQUIPMENT ON THE TABLE
+    // ==========================================
+    const cdjMat = new THREE.MeshStandardMaterial({
+      color: 0x18181b,
+      roughness: 0.3,
+      metalness: 0.8
+    });
+
+    const platterMat = new THREE.MeshStandardMaterial({
+      color: 0x09090b,
+      metalness: 0.95,
+      roughness: 0.15
+    });
+
+    // LEFT CDJ PLAYER (x = -0.85, y = 1.1, z = 0.8)
+    const cdjBaseGeo = new THREE.BoxGeometry(0.72, 0.1, 0.78);
+    const cdjLeft = new THREE.Mesh(cdjBaseGeo, cdjMat);
+    cdjLeft.position.set(-0.85, 1.1, 0.8);
+    stageGroup.add(cdjLeft);
+
+    // Left Jog Wheel (Platter)
+    const platterGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.04, 24);
+    this.djPlatterLeft = new THREE.Mesh(platterGeo, platterMat);
+    this.djPlatterLeft.position.set(-0.85, 1.17, 0.82);
+    const ledRingLeft = new THREE.Mesh(
+      new THREE.TorusGeometry(0.18, 0.018, 6, 24),
+      new THREE.MeshBasicMaterial({ color: 0x06b6d4 })
+    );
+    ledRingLeft.rotation.x = Math.PI / 2;
+    this.djPlatterLeft.add(ledRingLeft);
+    stageGroup.add(this.djPlatterLeft);
+
+    // Left CDJ Angled Screen (Waveform display)
+    const cdjScreenLeft = new THREE.Mesh(
+      new THREE.BoxGeometry(0.42, 0.22, 0.04),
+      new THREE.MeshBasicMaterial({ color: 0x0284c7 })
+    );
+    cdjScreenLeft.position.set(-0.85, 1.25, 0.56);
+    cdjScreenLeft.rotation.x = -Math.PI / 4;
+    stageGroup.add(cdjScreenLeft);
+
+    // RIGHT CDJ PLAYER (x = 0.85, y = 1.1, z = 0.8)
+    const cdjRight = new THREE.Mesh(cdjBaseGeo, cdjMat);
+    cdjRight.position.set(0.85, 1.1, 0.8);
+    stageGroup.add(cdjRight);
+
+    // Right Jog Wheel (Platter)
+    this.djPlatterRight = new THREE.Mesh(platterGeo, platterMat);
+    this.djPlatterRight.position.set(0.85, 1.17, 0.82);
+    const ledRingRight = new THREE.Mesh(
+      new THREE.TorusGeometry(0.18, 0.018, 6, 24),
+      new THREE.MeshBasicMaterial({ color: 0xf59e0b })
+    );
+    ledRingRight.rotation.x = Math.PI / 2;
+    this.djPlatterRight.add(ledRingRight);
+    stageGroup.add(this.djPlatterRight);
+
+    // Right CDJ Angled Screen
+    const cdjScreenRight = new THREE.Mesh(
+      new THREE.BoxGeometry(0.42, 0.22, 0.04),
+      new THREE.MeshBasicMaterial({ color: 0xf59e0b })
+    );
+    cdjScreenRight.position.set(0.85, 1.25, 0.56);
+    cdjScreenRight.rotation.x = -Math.PI / 4;
+    stageGroup.add(cdjScreenRight);
+
+    // 4-CHANNEL PRO MIXER (x = 0, y = 1.1, z = 0.8)
+    const mixerChassis = new THREE.Mesh(
+      new THREE.BoxGeometry(0.68, 0.1, 0.78),
+      new THREE.MeshStandardMaterial({ color: 0x1c1917, metalness: 0.8, roughness: 0.3 })
+    );
+    mixerChassis.position.set(0, 1.1, 0.8);
+    stageGroup.add(mixerChassis);
+
+    // Mixer Crossfader & EQ Knobs
+    const crossfader = new THREE.Mesh(
+      new THREE.BoxGeometry(0.18, 0.04, 0.04),
+      new THREE.MeshBasicMaterial({ color: 0xf8fafc })
+    );
+    crossfader.position.set(0.04, 1.17, 1.05);
+    stageGroup.add(crossfader);
+
+    // Mixer Stereo VU Level Meters (LEDs)
+    this.mixerLedBars = [];
+    for (let side = -1; side <= 1; side += 2) {
+      const vuBar = new THREE.Mesh(
+        new THREE.BoxGeometry(0.04, 0.22, 0.02),
+        new THREE.MeshBasicMaterial({ color: 0x22c55e })
+      );
+      vuBar.position.set(side * 0.07, 1.16, 0.78);
+      vuBar.rotation.x = -Math.PI / 2;
+      this.mixerLedBars.push(vuBar);
+      stageGroup.add(vuBar);
+    }
+
+    // Small EQ Rotary Knobs
+    for (let kx = -0.16; kx <= 0.16; kx += 0.1) {
+      for (let kz = 0.58; kz <= 0.88; kz += 0.12) {
+        const knob = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.022, 0.022, 0.04, 8),
+          new THREE.MeshBasicMaterial({ color: 0xe2e8f0 })
+        );
+        knob.position.set(kx, 1.17, kz);
+        stageGroup.add(knob);
+      }
+    }
+
+    // ==========================================
+    // SET LIST & LAPTOP MONITOR STAND
+    // ==========================================
+    const standPole = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.025, 0.025, 0.45, 8),
+      new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.8 })
+    );
+    standPole.position.set(-0.35, 1.3, 0.95);
+    stageGroup.add(standPole);
+
+    const laptopScreen = new THREE.Mesh(
+      new THREE.BoxGeometry(0.55, 0.35, 0.03),
+      new THREE.MeshStandardMaterial({
+        color: 0x0284c7,
+        emissive: 0x0369a1,
+        emissiveIntensity: 0.7
+      })
+    );
+    laptopScreen.position.set(-0.35, 1.52, 0.95);
+    laptopScreen.rotation.x = -Math.PI / 5;
+    laptopScreen.rotation.y = 0.2;
+    stageGroup.add(laptopScreen);
+
+    // Laptop Track Waveform Strip
+    const waveformStrip = new THREE.Mesh(
+      new THREE.BoxGeometry(0.46, 0.08, 0.02),
+      new THREE.MeshBasicMaterial({ color: 0xfacc15 })
+    );
+    waveformStrip.position.set(-0.35, 1.52, 0.97);
+    waveformStrip.rotation.x = -Math.PI / 5;
+    waveformStrip.rotation.y = 0.2;
+    stageGroup.add(waveformStrip);
+
+    // ==========================================
+    // BOOTH MONITOR SPEAKERS (Wedge angled monitors)
+    // ==========================================
+    const monitorGeo = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+    const monitorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
+
+    const monL = new THREE.Mesh(monitorGeo, monitorMat);
+    monL.position.set(-2.0, 0.35, 0.8);
+    monL.rotation.y = Math.PI / 5;
+    monL.rotation.x = -Math.PI / 10;
+    stageGroup.add(monL);
+
+    const monR = new THREE.Mesh(monitorGeo, monitorMat);
+    monR.position.set(2.0, 0.35, 0.8);
+    monR.rotation.y = -Math.PI / 5;
+    monR.rotation.x = -Math.PI / 10;
+    stageGroup.add(monR);
+
+    // STAGE CRYO CO2 JET CANNONS
+    const co2Mat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8 });
+    const co2L = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.6, 12), co2Mat);
+    co2L.position.set(-2.85, 0.3, 1.1);
+    co2L.rotation.z = -0.25;
+    stageGroup.add(co2L);
+
+    const co2R = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.6, 12), co2Mat);
+    co2R.position.set(2.85, 0.3, 1.1);
+    co2R.rotation.z = 0.25;
+    stageGroup.add(co2R);
+
+    // STAGE STROBE / POINT LIGHT
+    this.stageStrobeLight = new THREE.PointLight(0xffedd5, 1.2, 16);
+    this.stageStrobeLight.position.set(0, 4.2, 1.5);
+    stageGroup.add(this.stageStrobeLight);
     stageGroup.position.set(x, y, 0);
     this.scene.add(stageGroup);
   }
@@ -899,6 +1425,118 @@ export class RetroPlatformerEngine {
     this.respawnY = this.playerPos.y;
   }
 
+  private setupTrailParticles() {
+    const starGeo = new THREE.OctahedronGeometry(0.15, 0);
+    for (let i = 0; i < 28; i++) {
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0xfacc15,
+        transparent: true,
+        opacity: 0.9,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      const mesh = new THREE.Mesh(starGeo, mat);
+      mesh.visible = false;
+      this.scene.add(mesh);
+      this.trailParticlePool.push(mesh);
+    }
+  }
+
+  private spawnTrailParticle(time: number) {
+    if (this.trailParticlePool.length === 0) return;
+    const mesh = this.trailParticlePool.pop()!;
+    mesh.visible = true;
+
+    // Rainbow star color matching Mario star power
+    const hue = (time * 1.8 + Math.random() * 0.2) % 1.0;
+    (mesh.material as THREE.MeshBasicMaterial).color.setHSL(hue, 1.0, 0.6);
+    (mesh.material as THREE.MeshBasicMaterial).opacity = 0.9;
+    mesh.scale.set(1, 1, 1);
+
+    mesh.position.set(
+      this.playerPos.x - this.facing * (0.2 + Math.random() * 0.3),
+      this.playerPos.y + 0.3 + Math.random() * 0.9,
+      (Math.random() - 0.5) * 0.4
+    );
+
+    this.trailParticles.push({
+      mesh,
+      life: 0.45,
+      maxLife: 0.45,
+      vx: -this.facing * (0.8 + Math.random() * 0.8),
+      vy: (Math.random() - 0.2) * 1.2,
+      rotSpeed: (Math.random() - 0.5) * 12
+    });
+  }
+
+  private spawnCelestialTrailParticle(time: number) {
+    if (this.trailParticlePool.length === 0) return;
+    const mesh = this.trailParticlePool.pop()!;
+    mesh.visible = true;
+
+    // Glowing golden-white celestial stardust
+    const isGold = Math.random() > 0.4;
+    (mesh.material as THREE.MeshBasicMaterial).color.setHex(isGold ? 0xfef08a : 0xffffff);
+    (mesh.material as THREE.MeshBasicMaterial).opacity = 0.95;
+    mesh.scale.set(1.2, 1.2, 1.2);
+
+    mesh.position.set(
+      this.playerPos.x - this.facing * (0.3 + Math.random() * 0.4),
+      this.playerPos.y + 0.8 + (Math.random() - 0.5) * 0.6,
+      -0.2 + (Math.random() - 0.5) * 0.4
+    );
+
+    this.trailParticles.push({
+      mesh,
+      life: 0.55,
+      maxLife: 0.55,
+      vx: -this.facing * (0.6 + Math.random() * 0.6),
+      vy: -0.4 - Math.random() * 0.8,
+      rotSpeed: (Math.random() - 0.5) * 8
+    });
+  }
+
+  public evolveToSuperDJ() {
+    if (this.isSuperDJ) return;
+    this.isSuperDJ = true;
+    this.headphonesGroup.visible = true;
+    this.superStarAuraGroup.visible = true;
+    this.auraPointLight.intensity = 3.5;
+
+    // Mario Super Star / DJ Evolution fanfare
+    playSuperStarEvolutionSound();
+
+    if (this.callbacks.onEvolution) {
+      this.callbacks.onEvolution();
+    }
+  }
+
+  public unlockFlightPower() {
+    if (this.canFly) return;
+    this.canFly = true;
+    this.flightWingsGroup.visible = true;
+    this.guardianOrbsGroup.visible = true;
+
+    // Celestial angelic fanfare sound
+    playCelestialFanfare();
+
+    if (this.callbacks.onFlightUnlocked) {
+      this.callbacks.onFlightUnlocked();
+    }
+  }
+
+  public getCanFly(): boolean {
+    return this.canFly;
+  }
+
+  public getIsFlying(): boolean {
+    return this.isFlying;
+  }
+
+  public getIsSuperDJ(): boolean {
+    return this.isSuperDJ;
+  }
+
   private onWindowResize = () => {
     if (!this.container) return;
     const w = this.container.clientWidth;
@@ -908,7 +1546,13 @@ export class RetroPlatformerEngine {
     this.renderer.setSize(w, h);
   };
 
-  private updatePhysics(delta: number) {
+  private updatePhysics(delta: number, time: number) {
+    // If headlining the festival on the mainstage, play DJ mixing animation!
+    if (this.isFinalSetDJing) {
+      this.updateDJMixingAnimation(time, delta);
+      return;
+    }
+
     if (this.isPaused) return;
 
     // DJ Celebration pose when collecting a star
@@ -922,19 +1566,18 @@ export class RetroPlatformerEngine {
       return;
     }
 
-    const moveSpeed = 9.8;
-    const gravity = 28;
-    const jumpStrength = 13.6;
+    const moveSpeed = this.canFly ? 13.5 : (this.isSuperDJ ? 12.2 : 9.8);
+    const jumpStrength = this.isSuperDJ ? 15.2 : 13.6;
 
     // Horizontal Movement
     if (this.input.left) {
       this.playerVel.x = -moveSpeed;
       this.facing = -1;
-      this.runCycle += delta * 14;
+      this.runCycle += delta * (this.isSuperDJ ? 18 : 14);
     } else if (this.input.right) {
       this.playerVel.x = moveSpeed;
       this.facing = 1;
-      this.runCycle += delta * 14;
+      this.runCycle += delta * (this.isSuperDJ ? 18 : 14);
     } else {
       this.playerVel.x *= 0.7; // friction
       this.runCycle = 0;
@@ -943,17 +1586,57 @@ export class RetroPlatformerEngine {
     // Facing direction
     this.playerGroup.rotation.y = this.facing === 1 ? Math.PI * 0.15 : -Math.PI * 0.85;
 
-    // Jump
-    if (this.input.jump && this.isGrounded && !this.lastJumpPressed) {
-      this.playerVel.y = jumpStrength;
-      this.isGrounded = false;
-      this.lastJumpPressed = true;
-      playJumpSound();
+    // Jump & Flight Mechanic
+    if (this.canFly) {
+      if (this.input.jump) {
+        if (this.isGrounded) {
+          // Take-off leap
+          this.playerVel.y = 15.5;
+          this.isGrounded = false;
+          this.isFlying = true;
+          this.lastJumpPressed = true;
+          playJumpSound();
+          playCelestialFlightSound();
+          this.spawnCelestialTrailParticle(Date.now() * 0.001);
+        } else {
+          // Airborne flight ascent
+          this.isFlying = true;
+          this.playerVel.y = Math.min(this.playerVel.y + 24 * delta, 11.5);
+          playCelestialFlightSound();
+          this.spawnCelestialTrailParticle(Date.now() * 0.001);
+        }
+      } else if (!this.isGrounded) {
+        // Celestial gentle glide when falling
+        this.playerVel.y -= 8.5 * delta;
+        if (this.playerVel.y < -4.5) this.playerVel.y = -4.5;
+      }
+    } else {
+      // Standard Ground Jump
+      if (this.input.jump && this.isGrounded && !this.lastJumpPressed) {
+        this.playerVel.y = jumpStrength;
+        this.isGrounded = false;
+        this.lastJumpPressed = true;
+        playJumpSound();
+        if (this.isSuperDJ) {
+          for (let s = 0; s < 3; s++) {
+            this.spawnTrailParticle(Date.now() * 0.001);
+          }
+        }
+      }
+
+      // Standard Gravity
+      this.playerVel.y -= 28 * delta;
+      if (this.playerVel.y < -22) this.playerVel.y = -22;
     }
 
-    // Apply gravity
-    this.playerVel.y -= gravity * delta;
-    if (this.playerVel.y < -22) this.playerVel.y = -22;
+    // Spawn trail particles during movement in Super DJ mode
+    if (this.isSuperDJ && (Math.abs(this.playerVel.x) > 0.8 || !this.isGrounded)) {
+      this.trailSpawnTimer += delta;
+      if (this.trailSpawnTimer >= 0.04) {
+        this.trailSpawnTimer = 0;
+        this.spawnTrailParticle(Date.now() * 0.001);
+      }
+    }
 
     const nextX = this.playerPos.x + this.playerVel.x * delta;
     const nextY = this.playerPos.y + this.playerVel.y * delta;
@@ -972,13 +1655,16 @@ export class RetroPlatformerEngine {
           this.playerPos.y = pTop;
           this.playerVel.y = 0;
           landed = true;
+          this.isFlying = false;
           break;
         }
       }
     }
 
     this.isGrounded = landed;
-    if (!landed) {
+    if (landed) {
+      this.isFlying = false;
+    } else {
       this.playerPos.y = nextY;
     }
     this.playerPos.x = nextX;
@@ -1012,22 +1698,37 @@ export class RetroPlatformerEngine {
 
     // Running & jumping animation
     if (!this.isGrounded) {
+      this.playerLeftLeg.position.y = 0.4;
+      this.playerRightLeg.position.y = 0.4;
+      this.playerGroup.rotation.z = 0;
+      this.playerLeftArm.rotation.y = 0;
+      this.playerLeftArm.rotation.z = 0;
+      this.playerRightArm.rotation.y = 0;
+      this.playerRightArm.rotation.z = 0;
+      this.playerHead.rotation.y = 0;
+      this.playerHead.rotation.z = 0;
       this.playerLeftLeg.rotation.x = -0.55;
       this.playerRightLeg.rotation.x = 0.4;
       this.playerLeftArm.rotation.x = 0.75;
       this.playerRightArm.rotation.x = -0.75;
     } else if (Math.abs(this.playerVel.x) > 0.5) {
+      this.playerLeftLeg.position.y = 0.4;
+      this.playerRightLeg.position.y = 0.4;
+      this.playerGroup.rotation.z = 0;
+      this.playerLeftArm.rotation.y = 0;
+      this.playerLeftArm.rotation.z = 0;
+      this.playerRightArm.rotation.y = 0;
+      this.playerRightArm.rotation.z = 0;
+      this.playerHead.rotation.y = 0;
+      this.playerHead.rotation.z = 0;
       this.playerLeftLeg.rotation.x = Math.sin(this.runCycle) * 0.65;
       this.playerRightLeg.rotation.x = -Math.sin(this.runCycle) * 0.65;
       this.playerLeftArm.rotation.x = -Math.sin(this.runCycle) * 0.65;
       this.playerRightArm.rotation.x = Math.sin(this.runCycle) * 0.65;
+      this.playerHead.rotation.x = Math.sin(this.runCycle) * 0.1;
     } else {
-      this.playerLeftLeg.rotation.x = 0;
-      this.playerRightLeg.rotation.x = 0;
-      this.playerLeftArm.rotation.x = 0;
-      this.playerRightArm.rotation.x = 0;
-      // Head nodding slightly to the house beat!
-      this.playerHead.rotation.x = Math.sin(Date.now() * 0.007) * 0.06;
+      // Idle: Grooving and dancing to the house music rhythm!
+      this.updateHouseDanceAnimation(time, delta);
     }
 
     // Dynamic Camera tracking
@@ -1056,9 +1757,18 @@ export class RetroPlatformerEngine {
         // Duck SoundCloud music gently to 30% while reading
         setSoundCloudVolume(30);
 
-        playStarSound();
+        // Check if Star 2 ("El hombre en el que te convertiste"): trigger DJ Evolution!
+        if (star.index === 2 || star.chapter.id === 2 || star.chapter.specialEffect === 'dj-evolution') {
+          this.evolveToSuperDJ();
+        } else if (star.index === 4 || star.chapter.id === 4 || star.chapter.specialEffect === 'celestial-flight') {
+          // Chapter 4 ("Dos Luces en el Cielo" - Mamá y Papá): Super Poder de Vuelo Celestial!
+          this.unlockFlightPower();
+        } else {
+          playStarSound();
+        }
+
         star.mesh.visible = false;
-        this.callbacks.onStarCollect(star.index, star.chapter);
+        this.callbacks.onStarCollect(star.index, star.chapter, this.isSuperDJ, this.canFly);
         break;
       }
     }
@@ -1077,10 +1787,159 @@ export class RetroPlatformerEngine {
       }
     }
 
-    // Check Final Goal Dais
-    if (this.playerPos.x >= 155 && this.collectedStarsCount >= 5) {
+    // Check Final Goal Dais & DJ Booth Arrival
+    if (this.playerPos.x >= 154 && this.collectedStarsCount >= 5 && !this.isFinalSetDJing) {
+      this.startFinalDJSet();
       this.callbacks.onReachGoal();
     }
+  }
+
+  /**
+   * House Music Dancing Animation when idle (124 BPM groove)
+   */
+  private updateHouseDanceAnimation(time: number, _delta: number) {
+    const bpm = 124;
+    const danceTime = time * (bpm / 60) * Math.PI; // ~13 rad/s
+
+    const kick = Math.abs(Math.sin(danceTime));
+    const halfBeat = Math.sin(danceTime * 0.5);
+
+    // 1. Torso & Knee Jacking (The classic Chicago/House Music Jack)
+    this.playerLeftLeg.position.y = 0.4 - kick * 0.05;
+    this.playerRightLeg.position.y = 0.4 - (1 - kick) * 0.04;
+    this.playerLeftLeg.rotation.x = Math.sin(danceTime) * 0.24;
+    this.playerRightLeg.rotation.x = -Math.sin(danceTime) * 0.24;
+
+    // Body sway & groove tilt
+    this.playerGroup.rotation.z = halfBeat * 0.06;
+
+    // 2. Head Nodding & Groove Tilt (vibing with the 4/4 beat)
+    this.playerHead.rotation.x = -0.06 + Math.sin(danceTime * 2) * 0.16;
+    this.playerHead.rotation.z = Math.sin(danceTime) * 0.12;
+    this.playerHead.rotation.y = halfBeat * 0.2;
+
+    // 3. Arms & Hands House Dance Moves
+    // Left arm: bent at elbow, rhythm pump / finger snap
+    this.playerLeftArm.rotation.x = -0.55 + Math.sin(danceTime) * 0.48;
+    this.playerLeftArm.rotation.z = -0.32 - halfBeat * 0.18;
+    this.playerLeftArm.rotation.y = 0.28;
+
+    // Right arm: flowing wave / air pump
+    this.playerRightArm.rotation.x = -0.45 - Math.cos(danceTime) * 0.52;
+    this.playerRightArm.rotation.z = 0.32 + halfBeat * 0.18;
+    this.playerRightArm.rotation.y = -0.28;
+
+    // Super DJ mode extra energy
+    if (this.isSuperDJ) {
+      this.playerLeftArm.rotation.x = -0.85 + Math.sin(danceTime * 1.5) * 0.65;
+      this.playerRightArm.rotation.x = -0.85 - Math.cos(danceTime * 1.5) * 0.65;
+      this.playerHead.rotation.x = -0.12 + Math.sin(danceTime * 2) * 0.22;
+    }
+  }
+
+  /**
+   * Final Mainstage DJ Mixing Animation at the DJ Booth Table
+   */
+  private updateDJMixingAnimation(time: number, _delta: number) {
+    const mixTime = time * 7.8;
+
+    // Position behind the DJ table
+    this.playerPos.x = 158.0;
+    this.playerPos.z = 0.05;
+    this.facing = 1;
+    this.playerGroup.rotation.y = 0.18; // angled slightly towards crowd and camera
+
+    // House beat bounce behind the decks
+    const kickBounce = Math.abs(Math.sin(mixTime));
+    this.playerGroup.position.y = 9.5 + kickBounce * 0.12;
+    this.playerGroup.position.x = 158.0;
+    this.playerGroup.position.z = 0.05;
+    this.playerGroup.rotation.z = Math.sin(mixTime * 0.5) * 0.04;
+
+    this.playerLeftLeg.rotation.x = Math.sin(mixTime) * 0.18;
+    this.playerRightLeg.rotation.x = -Math.sin(mixTime) * 0.18;
+    this.playerLeftLeg.position.y = 0.4;
+    this.playerRightLeg.position.y = 0.4;
+
+    // Cycle through 3 iconic DJ behaviors every 12 seconds
+    const cycle = (time * 0.18) % 3;
+
+    if (cycle < 1.0) {
+      // Behavior 1: Cueing with Headphone to Ear & Tweaking EQ Knobs
+      this.playerLeftArm.rotation.x = -1.65 + Math.sin(mixTime * 0.5) * 0.06;
+      this.playerLeftArm.rotation.y = 0.82;
+      this.playerLeftArm.rotation.z = -0.72;
+
+      this.playerHead.rotation.z = -0.24 + Math.sin(mixTime * 2) * 0.04;
+      this.playerHead.rotation.x = -0.06 + Math.sin(mixTime * 2) * 0.16;
+      this.playerHead.rotation.y = 0.12;
+
+      this.playerRightArm.rotation.x = -0.9 + Math.sin(mixTime * 1.5) * 0.22;
+      this.playerRightArm.rotation.y = -0.28 + Math.cos(mixTime) * 0.18;
+      this.playerRightArm.rotation.z = 0.15;
+    } else if (cycle < 2.0) {
+      // Behavior 2: Scratching CDJ Jog Wheel & Filter Sweep
+      this.playerLeftArm.rotation.x = -0.92 + Math.sin(mixTime * 0.8) * 0.12;
+      this.playerLeftArm.rotation.y = 0.22;
+      this.playerLeftArm.rotation.z = -0.16;
+
+      this.playerRightArm.rotation.x = -0.84 + Math.sin(mixTime * 4) * 0.2;
+      this.playerRightArm.rotation.y = 0.32;
+      this.playerRightArm.rotation.z = 0.18;
+
+      this.playerHead.rotation.x = -0.1 + Math.sin(mixTime * 3) * 0.2;
+      this.playerHead.rotation.z = Math.sin(mixTime * 1.5) * 0.08;
+      this.playerHead.rotation.y = -0.1;
+    } else {
+      // Behavior 3: THE DROP! Hands in the air, hyping the crowd!
+      this.playerRightArm.rotation.x = -2.6 + Math.sin(mixTime * 3) * 0.25;
+      this.playerRightArm.rotation.z = 0.35;
+      this.playerRightArm.rotation.y = 0.1;
+
+      this.playerLeftArm.rotation.x = -2.3 + Math.sin(mixTime * 3 + 0.6) * 0.25;
+      this.playerLeftArm.rotation.z = -0.35;
+      this.playerLeftArm.rotation.y = -0.1;
+
+      this.playerHead.rotation.x = -0.32;
+      this.playerHead.rotation.z = Math.sin(mixTime * 2) * 0.06;
+      this.playerHead.rotation.y = 0;
+    }
+
+    // Dynamic DJ Camera Tracking - Festival Mainstage Shot
+    const targetCamX = 158.0 + Math.sin(time * 0.35) * 0.6;
+    const targetCamY = 11.2;
+    const targetCamZ = 6.4;
+    this.camera.position.x += (targetCamX - this.camera.position.x) * 0.06;
+    this.camera.position.y += (targetCamY - this.camera.position.y) * 0.06;
+    this.camera.position.z += (targetCamZ - this.camera.position.z) * 0.06;
+    this.camera.lookAt(158.0, 10.7, 0.4);
+  }
+
+  /**
+   * Activates the final DJ set when arriving at the mainstage
+   */
+  public startFinalDJSet() {
+    this.isFinalSetDJing = true;
+    this.playerPos.x = 158.0;
+    this.playerPos.y = 9.5;
+    this.playerPos.z = 0.05;
+    this.playerVel.x = 0;
+    this.playerVel.y = 0;
+    this.facing = 1;
+    this.isGrounded = true;
+    this.isFlying = false;
+
+    // Equip DJ headphones!
+    if (this.headphonesGroup) {
+      this.headphonesGroup.visible = true;
+    }
+
+    // Crank up SoundCloud volume to 100% full live set
+    setSoundCloudVolume(100);
+  }
+
+  public getIsFinalSetDJing(): boolean {
+    return this.isFinalSetDJing;
   }
 
   private animate = () => {
@@ -1102,8 +1961,47 @@ export class RetroPlatformerEngine {
     }
 
     // Animate festival laser beams sweeping across the night sky
+    const laserSpeedMult = this.isFinalSetDJing ? 2.2 : 1.0;
+    const laserAmp = this.isFinalSetDJing ? 0.45 : 0.3;
     for (const laser of this.lasers) {
-      laser.mesh.rotation.z = laser.baseRotZ + Math.sin(time * laser.speed + laser.phase) * 0.3;
+      laser.mesh.rotation.z = laser.baseRotZ + Math.sin(time * laser.speed * laserSpeedMult + laser.phase) * laserAmp;
+    }
+
+    // Animate DJ Table Decks & Mixer when on the mainstage
+    if (this.djPlatterLeft && this.djPlatterRight) {
+      const platterSpeed = this.isFinalSetDJing ? 4.5 : 1.2;
+      this.djPlatterLeft.rotation.y += delta * platterSpeed;
+      this.djPlatterRight.rotation.y += delta * platterSpeed;
+    }
+
+    // Animate Mixer Stereo VU Meters
+    if (this.mixerLedBars.length > 0) {
+      for (let i = 0; i < this.mixerLedBars.length; i++) {
+        const bar = this.mixerLedBars[i];
+        const val = Math.abs(Math.sin(time * 14 + i * 1.8));
+        bar.scale.set(1, 0.3 + val * 0.9, 1);
+        (bar.material as THREE.MeshBasicMaterial).color.setHex(
+          val > 0.8 ? 0xef4444 : (val > 0.5 ? 0xfacc15 : 0x22c55e)
+        );
+      }
+    }
+
+    // Animate DJ Booth Front Audio Spectrum Visualizer
+    if (this.spectrumBars.length > 0) {
+      for (let i = 0; i < this.spectrumBars.length; i++) {
+        const bar = this.spectrumBars[i];
+        const val = Math.abs(Math.sin(time * 8 + i * 0.9) * Math.cos(time * 4 + i * 1.3));
+        bar.scale.set(1, 0.2 + val * 1.1, 1);
+      }
+    }
+
+    // Stage Strobe Light pulsing
+    if (this.stageStrobeLight) {
+      if (this.isFinalSetDJing) {
+        this.stageStrobeLight.intensity = Math.sin(time * 18) > 0.6 ? 4.2 : 1.2;
+      } else {
+        this.stageStrobeLight.intensity = 1.0;
+      }
     }
 
     // Subtle bass pulse on subwoofer speaker cones
@@ -1118,24 +2016,164 @@ export class RetroPlatformerEngine {
       egg.mesh.position.y = egg.data.y + Math.sin(time * 2 + egg.mesh.id) * 0.14;
     }
 
-    // Animate Celestial Parents' orbs (Mom & Dad)
+    // Animate Celestial Parents' lights (Mom & Dad) with brilliant sparkling destellos
     if (this.parentOrbA && this.parentOrbB) {
-      this.parentOrbA.position.y = 16.8 + Math.sin(time * 1.5) * 0.5;
-      this.parentOrbB.position.y = 17.8 + Math.cos(time * 1.3) * 0.6;
-      this.parentLightA.intensity = 2.4 + Math.sin(time * 3) * 0.8;
-      this.parentLightB.intensity = 2.4 + Math.cos(time * 3) * 0.8;
-    }
+      this.parentOrbA.position.y = 17.5 + Math.sin(time * 1.6) * 0.5;
+      this.parentOrbB.position.y = 18.5 + Math.cos(time * 1.4) * 0.55;
 
-    // Pulse DJ headphone LED earcups
-    const cupGlow = 0.5 + Math.sin(time * 6) * 0.3;
-    for (const cup of this.headphoneCups) {
-      const mat = cup.material as THREE.MeshStandardMaterial;
-      if (mat && mat.emissiveIntensity !== undefined) {
-        mat.emissiveIntensity = cupGlow;
+      // Sparkling destello pulse (radiant super-power shimmer)
+      const destelloA = Math.abs(Math.sin(time * 9) * Math.cos(time * 14));
+      const destelloB = Math.abs(Math.cos(time * 8) * Math.sin(time * 15));
+
+      this.parentLightA.intensity = 3.6 + destelloA * 2.8;
+      this.parentLightB.intensity = 3.6 + destelloB * 2.8;
+
+      // Rotating Starburst Flare Cross Rays
+      for (const flare of this.parentFlareRaysA) {
+        flare.rotation.z += 0.008;
+        const s = 1 + destelloA * 0.65;
+        flare.scale.set(s, s, 1);
+        (flare.material as THREE.MeshBasicMaterial).opacity = 0.65 + destelloA * 0.35;
+      }
+      for (const flare of this.parentFlareRaysB) {
+        flare.rotation.z -= 0.007;
+        const s = 1 + destelloB * 0.65;
+        flare.scale.set(s, s, 1);
+        (flare.material as THREE.MeshBasicMaterial).opacity = 0.65 + destelloB * 0.35;
+      }
+
+      // Coronal Aura Rings
+      for (let r = 0; r < this.parentHaloRingsA.length; r++) {
+        const ringScale = 1 + Math.sin(time * 4 + r * 1.2) * 0.18;
+        this.parentHaloRingsA[r].scale.set(ringScale, ringScale, ringScale);
+        this.parentHaloRingsA[r].rotation.z += 0.015;
+      }
+      for (let r = 0; r < this.parentHaloRingsB.length; r++) {
+        const ringScale = 1 + Math.sin(time * 4 + r * 1.2 + 1) * 0.18;
+        this.parentHaloRingsB[r].scale.set(ringScale, ringScale, ringScale);
+        this.parentHaloRingsB[r].rotation.z -= 0.015;
+      }
+
+      // God-Rays breathing celestial light
+      if (this.parentGodRayA) {
+        (this.parentGodRayA.material as THREE.MeshBasicMaterial).opacity = 0.2 + Math.sin(time * 2.5) * 0.09;
+      }
+      if (this.parentGodRayB) {
+        (this.parentGodRayB.material as THREE.MeshBasicMaterial).opacity = 0.2 + Math.cos(time * 2.5) * 0.09;
+      }
+
+      // Orbiting Guardian Sparks
+      for (const spark of this.parentOrbitingSparks) {
+        spark.angle += delta * spark.speed;
+        spark.mesh.position.x = Math.cos(spark.angle) * spark.radius;
+        spark.mesh.position.z = Math.sin(spark.angle) * (spark.radius * 0.7);
+        spark.mesh.position.y = spark.heightOffset + Math.sin(spark.angle * 2.5) * 0.3;
+        spark.mesh.rotation.x += 0.05;
+        spark.mesh.rotation.y += 0.05;
       }
     }
 
-    this.updatePhysics(delta);
+    // Flight Wings & Guardian Orbs Animation
+    if (this.canFly) {
+      // Guardian orbs floating near Jonathan's shoulders
+      this.guardianOrbA.position.set(
+        Math.cos(time * 3.5) * 0.85,
+        1.45 + Math.sin(time * 3.5) * 0.18,
+        Math.sin(time * 3.5) * 0.35
+      );
+      this.guardianOrbB.position.set(
+        Math.cos(time * 3.5 + Math.PI) * 0.85,
+        1.45 + Math.sin(time * 3.5 + Math.PI) * 0.18,
+        Math.sin(time * 3.5 + Math.PI) * 0.35
+      );
+
+      // Wing flapping & aerodynamic soaring pose
+      if (this.isFlying && !this.isGrounded) {
+        const flapSpeed = this.input.jump ? 18 : 6;
+        const flapAmp = this.input.jump ? 0.65 : 0.32;
+        this.wingLeft.rotation.y = Math.sin(time * flapSpeed) * flapAmp;
+        this.wingRight.rotation.y = -Math.sin(time * flapSpeed) * flapAmp;
+
+        this.playerGroup.rotation.z = -this.facing * 0.22;
+        this.playerLeftArm.rotation.x = -1.15;
+        this.playerRightArm.rotation.x = -1.15;
+        this.playerLeftLeg.rotation.x = 0.35;
+        this.playerRightLeg.rotation.x = 0.35;
+
+        // Spawn celestial stardust trail while soaring
+        this.celestialTrailSpawnTimer += delta;
+        if (this.celestialTrailSpawnTimer >= 0.05) {
+          this.celestialTrailSpawnTimer = 0;
+          this.spawnCelestialTrailParticle(time);
+        }
+      } else {
+        // Wings gently folded back while grounded
+        this.wingLeft.rotation.y = 0.2;
+        this.wingRight.rotation.y = -0.2;
+        this.playerGroup.rotation.z = 0;
+      }
+    }
+
+    // Pulse DJ headphone LED earcups & Super Star Aura (Rainbow Mario Star power!)
+    if (this.isSuperDJ) {
+      this.superDJTimer += delta;
+      const hue = (time * 1.6) % 1.0;
+      const rainbowColor = new THREE.Color().setHSL(hue, 1.0, 0.55);
+      const secondaryColor = new THREE.Color().setHSL((hue + 0.35) % 1.0, 1.0, 0.6);
+
+      this.auraShieldMatA.color = rainbowColor;
+      this.auraShieldMatB.color = secondaryColor;
+      this.auraCrownMat.color = rainbowColor;
+      this.auraCrownMat.emissive = rainbowColor;
+      this.auraPointLight.color = rainbowColor;
+      this.auraPointLight.intensity = 3.0 + Math.sin(time * 12) * 1.2;
+
+      this.auraShieldA.rotation.z += 0.06;
+      this.auraShieldA.rotation.y += 0.04;
+      this.auraShieldB.rotation.x += 0.05;
+      this.auraShieldB.rotation.z -= 0.04;
+
+      const auraPulse = 1.0 + Math.sin(time * 10) * 0.1;
+      this.auraShieldA.scale.set(auraPulse, auraPulse, auraPulse);
+      this.auraShieldB.scale.set(auraPulse, auraPulse, auraPulse);
+
+      this.auraCrownStar.rotation.y += 0.08;
+      this.auraCrownStar.position.y = 2.75 + Math.sin(time * 6) * 0.12;
+
+      for (const cup of this.headphoneCups) {
+        const mat = cup.material as THREE.MeshStandardMaterial;
+        mat.emissive = rainbowColor;
+        mat.emissiveIntensity = 0.9 + Math.sin(time * 14) * 0.4;
+      }
+    } else {
+      const cupGlow = 0.5 + Math.sin(time * 6) * 0.3;
+      for (const cup of this.headphoneCups) {
+        const mat = cup.material as THREE.MeshStandardMaterial;
+        if (mat && mat.emissiveIntensity !== undefined) {
+          mat.emissiveIntensity = cupGlow;
+        }
+      }
+    }
+
+    // Update active star trail particles
+    for (let i = this.trailParticles.length - 1; i >= 0; i--) {
+      const p = this.trailParticles[i];
+      p.life -= delta;
+      p.mesh.position.x += p.vx * delta;
+      p.mesh.position.y += p.vy * delta;
+      p.mesh.rotation.z += p.rotSpeed * delta;
+      const progress = Math.max(0, p.life / p.maxLife);
+      p.mesh.scale.set(progress, progress, progress);
+      (p.mesh.material as THREE.MeshBasicMaterial).opacity = progress * 0.85;
+
+      if (p.life <= 0) {
+        p.mesh.visible = false;
+        this.trailParticles.splice(i, 1);
+        this.trailParticlePool.push(p.mesh);
+      }
+    }
+
+    this.updatePhysics(delta, time);
     this.renderer.render(this.scene, this.camera);
   };
 

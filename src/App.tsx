@@ -24,6 +24,8 @@ export default function App() {
   const [gameStarted, setGameStarted] = useState(false);
   const [starsCount, setStarsCount] = useState(0);
   const [currentChapter, setCurrentChapter] = useState<LetterChapter | null>(null);
+  const [isSuperDJ, setIsSuperDJ] = useState(false);
+  const [canFly, setCanFly] = useState(false);
   const [isVictory, setIsVictory] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [easterEggs, setEasterEggs] = useState<EasterEgg[]>(EASTER_EGGS_INITIAL);
@@ -47,8 +49,20 @@ export default function App() {
       LETTER_CHAPTERS,
       EASTER_EGGS_INITIAL,
       {
-        onStarCollect: (starIndex, chapter) => {
+        onStarCollect: (starIndex, chapter, superDJActive, flightActive) => {
           setCurrentChapter(chapter);
+          if (superDJActive) {
+            setIsSuperDJ(true);
+          }
+          if (flightActive) {
+            setCanFly(true);
+          }
+        },
+        onEvolution: () => {
+          setIsSuperDJ(true);
+        },
+        onFlightUnlocked: () => {
+          setCanFly(true);
         },
         onEasterEggFound: (egg) => {
           setEasterEggs((prev) =>
@@ -159,12 +173,14 @@ export default function App() {
           onToggleSound={handleToggleSound}
           easterEggs={easterEggs}
           recentEggNotification={recentEggNotification}
+          isSuperDJ={isSuperDJ}
+          canFly={canFly}
         />
       )}
 
       {/* On-Screen Mobile Touch Controls */}
       {gameStarted && !currentChapter && !isVictory && (
-        <TouchControls onControlChange={handleTouchControl} />
+        <TouchControls onControlChange={handleTouchControl} canFly={canFly} />
       )}
 
       {/* Letter Reading Modal on Star Collect */}
@@ -172,6 +188,8 @@ export default function App() {
         <LetterModal
           chapter={currentChapter}
           onContinue={handleContinueAdventure}
+          isSuperDJ={isSuperDJ}
+          canFly={canFly}
         />
       )}
 

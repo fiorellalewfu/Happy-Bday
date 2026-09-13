@@ -15,6 +15,8 @@ interface GameHUDProps {
   onToggleSound: () => void;
   easterEggs: EasterEgg[];
   recentEggNotification: EasterEgg | null;
+  isSuperDJ?: boolean;
+  canFly?: boolean;
 }
 
 export const GameHUD: React.FC<GameHUDProps> = ({
@@ -23,7 +25,9 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   isMuted,
   onToggleSound,
   easterEggs,
-  recentEggNotification
+  recentEggNotification,
+  isSuperDJ,
+  canFly
 }) => {
   const [isPlayingSC, setIsPlayingSC] = useState(false);
 
@@ -41,12 +45,35 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   return (
     <div className="absolute inset-x-0 top-3 pointer-events-none z-30 px-3 md:px-6 flex flex-col gap-2 select-none">
       <div className="flex items-center justify-between gap-2">
-        {/* Star Counter (House Neon Pill) */}
-        <div className="pointer-events-auto flex items-center gap-2.5 bg-slate-900/85 backdrop-blur-md px-3.5 py-1.5 rounded-2xl border border-amber-400/40 shadow-xl">
-          <span className="text-xl animate-bounce">⭐</span>
-          <div className="font-game text-lg md:text-xl text-yellow-300 tracking-wider">
-            {starsCount} / {totalStars}
+        {/* Star Counter & Super DJ Badge */}
+        <div className="flex items-center gap-2">
+          {/* Star Counter (House Neon Pill) */}
+          <div className="pointer-events-auto flex items-center gap-2.5 bg-slate-900/85 backdrop-blur-md px-3.5 py-1.5 rounded-2xl border border-amber-400/40 shadow-xl">
+            <span className="text-xl animate-bounce">⭐</span>
+            <div className="font-game text-lg md:text-xl text-yellow-300 tracking-wider">
+              {starsCount} / {totalStars}
+            </div>
           </div>
+
+          {/* Super DJ Mode Indicator */}
+          {isSuperDJ && (
+            <div className="pointer-events-auto flex items-center gap-1.5 bg-gradient-to-r from-amber-500/25 via-pink-500/25 to-sky-500/25 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-amber-300/70 shadow-lg shadow-amber-400/20 animate-pulse">
+              <Headphones className="w-4 h-4 text-amber-300 animate-spin" style={{ animationDuration: '4s' }} />
+              <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wider font-display hidden xs:inline">
+                Super DJ
+              </span>
+            </div>
+          )}
+
+          {/* Celestial Flight Power Indicator */}
+          {canFly && (
+            <div className="pointer-events-auto flex items-center gap-1.5 bg-gradient-to-r from-yellow-500/30 via-amber-400/25 to-white/20 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-yellow-300/80 shadow-lg shadow-yellow-300/30 animate-pulse">
+              <span className="text-sm">🕊️</span>
+              <span className="text-[11px] font-bold text-yellow-200 uppercase tracking-wider font-display hidden xs:inline">
+                Vuelo Activo
+              </span>
+            </div>
+          )}
         </div>
 
         {/* DJ Track Player Bar (JONAMS - Sunday Session VIII) */}

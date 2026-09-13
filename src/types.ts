@@ -5,7 +5,7 @@ export interface LetterChapter {
   text: string[];
   icon: string;
   quote?: string;
-  specialEffect?: 'twilight-lights' | 'golden-confetti' | 'leaves-canada';
+  specialEffect?: 'twilight-lights' | 'golden-confetti' | 'leaves-canada' | 'dj-evolution' | 'celestial-flight';
 }
 
 export interface EasterEgg {
@@ -22,4 +22,13 @@ export interface GameControlState {
   left: boolean;
   right: boolean;
   jump: boolean;
+}
+
+export interface GameEngineCallbacks {
+  onStarCollect: (starIndex: number, chapter: LetterChapter, isSuperDJ: boolean, canFly: boolean) => void;
+  onEasterEggFound: (egg: EasterEgg) => void;
+  onReachGoal: () => void;
+  onStarCountUpdate: (count: number) => void;
+  onEvolution?: () => void;
+  onFlightUnlocked?: () => void;
 }

@@ -16,6 +16,7 @@ export const LETTER_CHAPTERS: LetterChapter[] = [
     title: "Estrella 2 — El Hombre en el que te convertiste",
     subtitle: "Música, pasión y constancia",
     icon: "🎧",
+    specialEffect: 'dj-evolution',
     text: [
       "En esta nueva vuelta al sol, me emociona mucho pensar en el hombre en el que te has convertido.",
       "Te veo haciendo lo que te gusta, haciendo música como DJ, siguiendo tus pasiones, cuidándote y también guiando al Moisés por el buen camino del ejercicio.",
@@ -37,7 +38,7 @@ export const LETTER_CHAPTERS: LetterChapter[] = [
     title: "Estrella 4 — El Leoncito y Nuestros Papás",
     subtitle: "Dos luces eternas alumbrando tus pasos",
     icon: "✨",
-    specialEffect: 'twilight-lights',
+    specialEffect: 'celestial-flight',
     text: [
       "A veces recuerdo cuando eras pequeño y siento que disfruté tanto esa etapa tuya.",
       "Para mí siempre vas a tener algo de ese leoncito de la familia, lleno de energía, personalidad y vida.",
