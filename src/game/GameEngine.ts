@@ -169,11 +169,17 @@ export class RetroPlatformerEngine {
 
     const deviceInfo = navigator as Navigator & { deviceMemory?: number };
     const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+    const constrainedHardware = (deviceInfo.deviceMemory ?? 8) <= 4
+      || navigator.hardwareConcurrency <= 4;
     this.reducedQuality = coarsePointer
       || window.innerWidth < 900
-      || (deviceInfo.deviceMemory ?? 8) <= 4
-      || navigator.hardwareConcurrency <= 4;
-    this.pixelRatioCap = this.reducedQuality ? 0.9 : 1.5;
+      || constrainedHardware;
+
+    // Keep mobile optimizations for shadows and frame rate, but do not render the
+    // canvas below its CSS resolution. That made the bright Super Star aura and
+    // the player silhouette visibly pixelated when mobile browsers scaled the
+    // canvas to the device's high-density screen.
+    this.pixelRatioCap = constrainedHardware ? 1.25 : 1.5;
     this.minimumRenderInterval = this.reducedQuality ? 1 / 32 : 0;
 
     // Scene with deep twilight & electronic sunset festival atmosphere
@@ -189,7 +195,8 @@ export class RetroPlatformerEngine {
 
     // Renderer
     this.renderer = new THREE.WebGLRenderer({
-      antialias: !this.reducedQuality,
+      // Thin, rotating aura geometry needs multisample antialiasing on mobile.
+      antialias: true,
       alpha: false,
       powerPreference: 'high-performance'
     });
