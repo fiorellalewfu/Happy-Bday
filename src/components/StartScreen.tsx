@@ -7,6 +7,7 @@ interface StartScreenProps {
   onStart: (deviceMode: DeviceMode) => void;
   soundCloudReady: boolean;
   isFullscreen: boolean;
+  fullscreenSupported: boolean;
   onToggleFullscreen: () => void;
 }
 
@@ -16,6 +17,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({
   onStart,
   soundCloudReady,
   isFullscreen,
+  fullscreenSupported,
   onToggleFullscreen
 }) => {
   const fireworks = ['firework-one', 'firework-two', 'firework-three', 'firework-four'];
@@ -155,7 +157,11 @@ export const StartScreen: React.FC<StartScreenProps> = ({
           className="fullscreen-option mt-3 w-full py-2.5 px-5 rounded-xl font-display text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
         >
           {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-          <span>{isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}</span>
+          <span>
+            {isFullscreen
+              ? 'Salir de pantalla completa'
+              : fullscreenSupported ? 'Pantalla completa' : 'Cómo usar pantalla completa'}
+          </span>
         </button>
 
         {/* Instructions / Controls */}

@@ -17,6 +17,7 @@ interface GameHUDProps {
   isMuted: boolean;
   onToggleSound: () => void;
   isFullscreen: boolean;
+  fullscreenSupported: boolean;
   onToggleFullscreen: () => void;
   onBackToMenu: () => void;
   easterEggs: EasterEgg[];
@@ -34,6 +35,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   isMuted,
   onToggleSound,
   isFullscreen,
+  fullscreenSupported,
   onToggleFullscreen,
   onBackToMenu,
   easterEggs,
@@ -169,7 +171,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             id="btn-toggle-fullscreen"
             onClick={onToggleFullscreen}
             aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Ver en pantalla completa'}
-            title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+            title={isFullscreen ? 'Salir de pantalla completa' : fullscreenSupported ? 'Pantalla completa' : 'Cómo usar pantalla completa'}
             className="w-9 h-9 md:w-10 md:h-10 bg-slate-900/85 hover:bg-slate-800 backdrop-blur-md rounded-2xl border border-sky-400/30 text-sky-200 flex items-center justify-center shadow-lg active:scale-95 transition-all cursor-pointer"
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}

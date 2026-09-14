@@ -7,7 +7,7 @@ import { LetterModal } from './components/LetterModal';
 import { VictoryModal } from './components/VictoryModal';
 import { TouchControls } from './components/TouchControls';
 import { GameHUD } from './components/GameHUD';
-import { RotateCcw, Smartphone } from 'lucide-react';
+import { Maximize2, RotateCcw, Smartphone, X } from 'lucide-react';
 import { toggleMute } from './audio/soundEffects';
 import {
   registerSoundCloudWidget,
@@ -28,12 +28,37 @@ type FullscreenDocument = Document & {
   webkitExitFullscreen?: () => Promise<void> | void;
 };
 
+type InstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+};
+
+type StandaloneNavigator = Navigator & {
+  standalone?: boolean;
+};
+
 const getFullscreenElement = () => {
   const fullscreenDocument = document as FullscreenDocument;
   return document.fullscreenElement ?? fullscreenDocument.webkitFullscreenElement ?? null;
 };
 
-const enterGameFullscreen = async () => {
+const isStandaloneMode = () => (
+  window.matchMedia('(display-mode: fullscreen)').matches
+  || window.matchMedia('(display-mode: standalone)').matches
+  || Boolean((navigator as StandaloneNavigator).standalone)
+);
+
+const supportsNativeFullscreen = () => {
+  const root = document.documentElement as FullscreenRoot;
+  return Boolean(root.requestFullscreen || root.webkitRequestFullscreen);
+};
+
+const isRealMobileDevice = () => (
+  window.matchMedia('(pointer: coarse)').matches
+  || (navigator.maxTouchPoints > 0 && Math.min(window.innerWidth, window.innerHeight) < 900)
+);
+
+const enterGameFullscreen = async (): Promise<boolean> => {
   const root = document.documentElement as FullscreenRoot;
 
   try {
@@ -43,8 +68,10 @@ const enterGameFullscreen = async () => {
       await root.webkitRequestFullscreen();
     }
   } catch {
-    // The layout still fills the available viewport when fullscreen is blocked.
+    return false;
   }
+
+  return Boolean(getFullscreenElement()) || isStandaloneMode();
 };
 
 const requestGameDisplayMode = async (lockLandscape: boolean) => {
@@ -87,7 +114,8 @@ export default function App() {
   const engineRef = useRef<RetroPlatformerEngine | null>(null);
 
   const [gameStarted, setGameStarted] = useState(false);
-  const [deviceMode, setDeviceMode] = useState<DeviceMode>('desktop');
+  const [touchModeEnabled, setTouchModeEnabled] = useState(false);
+  const [isMobileDevice] = useState(() => isRealMobileDevice());
   const [isPortrait, setIsPortrait] = useState(() => window.innerHeight > window.innerWidth);
   const [starsCount, setStarsCount] = useState(0);
   const [discCount, setDiscCount] = useState(0);
@@ -98,7 +126,9 @@ export default function App() {
   const [isVictory, setIsVictory] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [soundCloudReady, setSoundCloudReady] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(() => Boolean(getFullscreenElement()));
+  const [isFullscreen, setIsFullscreen] = useState(() => Boolean(getFullscreenElement()) || isStandaloneMode());
+  const [showFullscreenHelp, setShowFullscreenHelp] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [easterEggs, setEasterEggs] = useState<EasterEgg[]>(EASTER_EGGS_INITIAL);
   const [recentEggNotification, setRecentEggNotification] = useState<EasterEgg | null>(null);
 
@@ -115,7 +145,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const updateFullscreenState = () => setIsFullscreen(Boolean(getFullscreenElement()));
+    const updateFullscreenState = () => setIsFullscreen(Boolean(getFullscreenElement()) || isStandaloneMode());
     document.addEventListener('fullscreenchange', updateFullscreenState);
     document.addEventListener('webkitfullscreenchange', updateFullscreenState);
 
@@ -123,6 +153,16 @@ export default function App() {
       document.removeEventListener('fullscreenchange', updateFullscreenState);
       document.removeEventListener('webkitfullscreenchange', updateFullscreenState);
     };
+  }, []);
+
+  useEffect(() => {
+    const captureInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as InstallPromptEvent);
+    };
+
+    window.addEventListener('beforeinstallprompt', captureInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', captureInstallPrompt);
   }, []);
 
   // Initialize SoundCloud Widget iframe
@@ -196,11 +236,12 @@ export default function App() {
   const handleStartGame = async (selectedDevice: DeviceMode) => {
     if (!soundCloudReady) return;
 
-    setDeviceMode(selectedDevice);
+    const shouldUseTouchMode = selectedDevice === 'mobile' || isMobileDevice;
+    setTouchModeEnabled(shouldUseTouchMode);
 
     // Keep playback directly in the click gesture for browser autoplay rules.
     playSoundCloudTrack();
-    const displayModeRequest = requestGameDisplayMode(selectedDevice === 'mobile');
+    const displayModeRequest = requestGameDisplayMode(shouldUseTouchMode);
 
     setGameStarted(true);
     if (engineRef.current) {
@@ -208,7 +249,7 @@ export default function App() {
     }
 
     await displayModeRequest;
-    if (selectedDevice === 'mobile') {
+    if (shouldUseTouchMode) {
       setIsPortrait(window.innerHeight > window.innerWidth);
     }
   };
@@ -241,7 +282,7 @@ export default function App() {
   };
 
   const handleToggleFullscreen = async () => {
-    if (getFullscreenElement()) {
+    if (getFullscreenElement() && !isStandaloneMode()) {
       const fullscreenDocument = document as FullscreenDocument;
       try {
         if (document.exitFullscreen) {
@@ -255,7 +296,23 @@ export default function App() {
       return;
     }
 
-    await enterGameFullscreen();
+    if (isStandaloneMode()) return;
+
+    if (supportsNativeFullscreen()) {
+      const entered = await enterGameFullscreen();
+      if (entered) return;
+    }
+
+    if (installPrompt) {
+      await installPrompt.prompt();
+      const choice = await installPrompt.userChoice;
+      if (choice.outcome === 'accepted') {
+        setInstallPrompt(null);
+        return;
+      }
+    }
+
+    setShowFullscreenHelp(true);
   };
 
   const handleBackToMenu = async () => {
@@ -298,6 +355,7 @@ export default function App() {
           onStart={handleStartGame}
           soundCloudReady={soundCloudReady}
           isFullscreen={isFullscreen}
+          fullscreenSupported={supportsNativeFullscreen() || isStandaloneMode()}
           onToggleFullscreen={handleToggleFullscreen}
         />
       )}
@@ -313,6 +371,7 @@ export default function App() {
           isMuted={isMuted}
           onToggleSound={handleToggleSound}
           isFullscreen={isFullscreen}
+          fullscreenSupported={supportsNativeFullscreen() || isStandaloneMode()}
           onToggleFullscreen={handleToggleFullscreen}
           onBackToMenu={handleBackToMenu}
           easterEggs={easterEggs}
@@ -323,12 +382,12 @@ export default function App() {
       )}
 
       {/* On-Screen Mobile Touch Controls */}
-      {gameStarted && deviceMode === 'mobile' && !currentChapter && !isVictory && (
+      {gameStarted && touchModeEnabled && !currentChapter && !isVictory && (
         <TouchControls onControlChange={handleTouchControl} canFly={canFly} />
       )}
 
       {/* Cross-browser fallback when automatic landscape lock is unavailable. */}
-      {gameStarted && deviceMode === 'mobile' && isPortrait && (
+      {gameStarted && touchModeEnabled && isPortrait && (
         <div className="rotate-device-overlay fixed inset-0 z-[100] flex items-center justify-center p-6 text-center">
           <div className="rotate-device-card rounded-3xl p-7 max-w-sm w-full">
             <div className="rotate-phone-visual mx-auto mb-4" aria-hidden="true">
@@ -363,6 +422,43 @@ export default function App() {
 
       {/* Final Victory / Celebration Modal */}
       {isVictory && <VictoryModal onRestart={handleRestart} />}
+
+      {showFullscreenHelp && (
+        <div className="fullscreen-help-overlay fixed inset-0 z-[150] flex items-center justify-center p-4 text-center">
+          <div className="fullscreen-help-card relative w-full max-w-sm rounded-3xl p-6 text-slate-100">
+            <button
+              type="button"
+              onClick={() => setShowFullscreenHelp(false)}
+              aria-label="Cerrar instrucciones"
+              className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-xl bg-white/10 text-slate-200 cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="fullscreen-help-icon mx-auto mb-4">
+              <Maximize2 className="h-7 w-7" />
+            </div>
+            <h2 className="font-game text-2xl text-white">Pantalla completa móvil</h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-300">
+              Este navegador no permite ocultar sus barras desde una página web. Para verla realmente completa, abre el juego como app:
+            </p>
+            <div className="mt-4 space-y-2 text-left text-sm">
+              <p className="rounded-xl bg-white/7 p-3">
+                <strong className="text-orange-300">iPhone/iPad:</strong> toca Compartir y luego <em>Agregar a pantalla de inicio</em>.
+              </p>
+              <p className="rounded-xl bg-white/7 p-3">
+                <strong className="text-sky-300">Android:</strong> abre el menú ⋮ y elige <em>Instalar aplicación</em> o <em>Agregar a pantalla principal</em>.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowFullscreenHelp(false)}
+              className="fullscreen-help-continue mt-5 w-full rounded-xl px-5 py-3 font-game uppercase cursor-pointer"
+            >
+              Continuar en el navegador
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
