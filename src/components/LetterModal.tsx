@@ -29,13 +29,13 @@ export const LetterModal: React.FC<LetterModalProps> = ({ chapter, onContinue, i
         : `Estrella ${chapter.id} desbloqueada`;
 
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
+    <div className="letter-modal-overlay absolute inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
       <motion.div
         initial={{ scale: 0.85, opacity: 0, y: 25 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.85, opacity: 0 }}
         transition={{ type: 'spring', damping: 22, stiffness: 280 }}
-        className={`w-full max-w-xl house-panel rounded-3xl p-6 md:p-8 text-slate-100 relative my-auto shadow-2xl border border-amber-400/40 ${isMushroomChapter ? 'mushroom-letter' : ''} ${isEvolutionChapter ? 'evolution-letter' : ''} ${isBrothersChapter ? 'brothers-letter' : ''} ${isParentsChapter ? 'parents-letter' : ''} ${isCanadaChapter ? 'canada-letter' : ''}`}
+        className={`letter-modal-panel w-full max-w-xl house-panel rounded-3xl p-6 md:p-8 text-slate-100 relative my-auto shadow-2xl border border-amber-400/40 ${isMushroomChapter ? 'mushroom-letter' : ''} ${isEvolutionChapter ? 'evolution-letter' : ''} ${isBrothersChapter ? 'brothers-letter' : ''} ${isParentsChapter ? 'parents-letter' : ''} ${isCanadaChapter ? 'canada-letter' : ''}`}
       >
         {isEvolutionChapter && (
           <div className="dj-magic-aura" aria-hidden="true">

@@ -1,15 +1,23 @@
 import React from 'react';
-import { Play, Disc3, Headphones, Monitor, Smartphone } from 'lucide-react';
+import { Play, Disc3, Headphones, LoaderCircle, Maximize2, Minimize2, Monitor, Smartphone } from 'lucide-react';
 import { motion } from 'motion/react';
 import { JONAMS_TRACK_META } from '../audio/soundcloudManager';
 
 interface StartScreenProps {
   onStart: (deviceMode: DeviceMode) => void;
+  soundCloudReady: boolean;
+  isFullscreen: boolean;
+  onToggleFullscreen: () => void;
 }
 
 export type DeviceMode = 'desktop' | 'mobile';
 
-export const StartScreen: React.FC<StartScreenProps> = ({ onStart }) => {
+export const StartScreen: React.FC<StartScreenProps> = ({
+  onStart,
+  soundCloudReady,
+  isFullscreen,
+  onToggleFullscreen
+}) => {
   const fireworks = ['firework-one', 'firework-two', 'firework-three', 'firework-four'];
   const [deviceMode, setDeviceMode] = React.useState<DeviceMode>(() => {
     if (typeof window === 'undefined') return 'desktop';
@@ -126,10 +134,28 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart }) => {
         <button
           id="btn-start-adventure"
           onClick={() => onStart(deviceMode)}
-          className="w-full py-4 px-6 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-400 text-slate-950 font-game text-xl md:text-2xl rounded-2xl retro-btn uppercase flex items-center justify-center gap-3 cursor-pointer shadow-xl transform active:scale-95 transition-all"
+          disabled={!soundCloudReady}
+          aria-busy={!soundCloudReady}
+          className="w-full py-4 px-6 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-400 disabled:opacity-60 disabled:cursor-wait text-slate-950 font-game text-xl md:text-2xl rounded-2xl retro-btn uppercase flex items-center justify-center gap-3 cursor-pointer shadow-xl transform active:scale-95 transition-all"
         >
-          <Play className="w-6 h-6 fill-current" />
-          {deviceMode === 'mobile' ? 'Comenzar en Celular' : 'Comenzar Aventura'}
+          {soundCloudReady ? (
+            <Play className="w-6 h-6 fill-current" />
+          ) : (
+            <LoaderCircle className="w-6 h-6 animate-spin" />
+          )}
+          {soundCloudReady
+            ? (deviceMode === 'mobile' ? 'Comenzar en Celular' : 'Comenzar Aventura')
+            : 'Cargando SoundCloud'}
+        </button>
+
+        <button
+          id="btn-start-fullscreen"
+          type="button"
+          onClick={onToggleFullscreen}
+          className="fullscreen-option mt-3 w-full py-2.5 px-5 rounded-xl font-display text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all"
+        >
+          {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          <span>{isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}</span>
         </button>
 
         {/* Instructions / Controls */}

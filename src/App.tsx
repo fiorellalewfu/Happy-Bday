@@ -8,13 +8,11 @@ import { VictoryModal } from './components/VictoryModal';
 import { TouchControls } from './components/TouchControls';
 import { GameHUD } from './components/GameHUD';
 import { RotateCcw, Smartphone } from 'lucide-react';
-import { toggleMute, getMuteState, startBackgroundMusic, stopBackgroundMusic } from './audio/soundEffects';
+import { toggleMute } from './audio/soundEffects';
 import {
   registerSoundCloudWidget,
   playSoundCloudTrack,
-  pauseSoundCloudTrack,
-  setSoundCloudVolume,
-  isSoundCloudPlaying
+  pauseSoundCloudTrack
 } from './audio/soundcloudManager';
 
 type LockableOrientation = ScreenOrientation & {
@@ -30,30 +28,41 @@ type FullscreenDocument = Document & {
   webkitExitFullscreen?: () => Promise<void> | void;
 };
 
-const requestMobileLandscape = async () => {
+const getFullscreenElement = () => {
+  const fullscreenDocument = document as FullscreenDocument;
+  return document.fullscreenElement ?? fullscreenDocument.webkitFullscreenElement ?? null;
+};
+
+const enterGameFullscreen = async () => {
   const root = document.documentElement as FullscreenRoot;
 
   try {
-    if (!document.fullscreenElement && root.requestFullscreen) {
+    if (!getFullscreenElement() && root.requestFullscreen) {
       await root.requestFullscreen({ navigationUI: 'hide' });
-    } else if (!document.fullscreenElement && root.webkitRequestFullscreen) {
+    } else if (!getFullscreenElement() && root.webkitRequestFullscreen) {
       await root.webkitRequestFullscreen();
     }
   } catch {
-    // Some mobile browsers (notably iPhone Safari) do not allow page fullscreen.
-  }
-
-  try {
-    const orientation = window.screen.orientation as LockableOrientation | undefined;
-    if (orientation?.lock) {
-      await orientation.lock('landscape');
-    }
-  } catch {
-    // The rotate-device overlay remains as the cross-browser fallback.
+    // The layout still fills the available viewport when fullscreen is blocked.
   }
 };
 
-const releaseMobileDisplayMode = async () => {
+const requestGameDisplayMode = async (lockLandscape: boolean) => {
+  await enterGameFullscreen();
+
+  if (lockLandscape) {
+    try {
+      const orientation = window.screen.orientation as LockableOrientation | undefined;
+      if (orientation?.lock) {
+        await orientation.lock('landscape');
+      }
+    } catch {
+      // The rotate-device overlay remains as the cross-browser fallback.
+    }
+  }
+};
+
+const releaseGameDisplayMode = async () => {
   try {
     window.screen.orientation?.unlock();
   } catch {
@@ -88,6 +97,8 @@ export default function App() {
   const [canFly, setCanFly] = useState(false);
   const [isVictory, setIsVictory] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [soundCloudReady, setSoundCloudReady] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(() => Boolean(getFullscreenElement()));
   const [easterEggs, setEasterEggs] = useState<EasterEgg[]>(EASTER_EGGS_INITIAL);
   const [recentEggNotification, setRecentEggNotification] = useState<EasterEgg | null>(null);
 
@@ -103,10 +114,22 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const updateFullscreenState = () => setIsFullscreen(Boolean(getFullscreenElement()));
+    document.addEventListener('fullscreenchange', updateFullscreenState);
+    document.addEventListener('webkitfullscreenchange', updateFullscreenState);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', updateFullscreenState);
+      document.removeEventListener('webkitfullscreenchange', updateFullscreenState);
+    };
+  }, []);
+
   // Initialize SoundCloud Widget iframe
   useEffect(() => {
     if (scIframeRef.current) {
-      registerSoundCloudWidget(scIframeRef.current, () => {
+      return registerSoundCloudWidget(scIframeRef.current, () => {
+        setSoundCloudReady(true);
         console.log("SoundCloud Widget for JONAMS Sunday Session VIII ready.");
       });
     }
@@ -171,27 +194,20 @@ export default function App() {
 
   // Handle Game Start
   const handleStartGame = async (selectedDevice: DeviceMode) => {
+    if (!soundCloudReady) return;
+
     setDeviceMode(selectedDevice);
-    const landscapeRequest = selectedDevice === 'mobile'
-      ? requestMobileLandscape()
-      : Promise.resolve();
+
+    // Keep playback directly in the click gesture for browser autoplay rules.
+    playSoundCloudTrack();
+    const displayModeRequest = requestGameDisplayMode(selectedDevice === 'mobile');
 
     setGameStarted(true);
     if (engineRef.current) {
       engineRef.current.setPaused(false);
     }
 
-    // Play Jonathan's real DJ track
-    playSoundCloudTrack();
-
-    // Fallback Web Audio groove in case SoundCloud needs user gesture or is blocked
-    setTimeout(() => {
-      if (!isSoundCloudPlaying()) {
-        startBackgroundMusic();
-      }
-    }, 1200);
-
-    await landscapeRequest;
+    await displayModeRequest;
     if (selectedDevice === 'mobile') {
       setIsPortrait(window.innerHeight > window.innerWidth);
     }
@@ -212,7 +228,6 @@ export default function App() {
 
     if (nextMuteState) {
       pauseSoundCloudTrack();
-      stopBackgroundMusic();
     } else {
       playSoundCloudTrack();
     }
@@ -225,15 +240,32 @@ export default function App() {
     }
   };
 
+  const handleToggleFullscreen = async () => {
+    if (getFullscreenElement()) {
+      const fullscreenDocument = document as FullscreenDocument;
+      try {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if (fullscreenDocument.webkitExitFullscreen) {
+          await fullscreenDocument.webkitExitFullscreen();
+        }
+      } catch {
+        // Keep the current display mode if the browser rejects the request.
+      }
+      return;
+    }
+
+    await enterGameFullscreen();
+  };
+
   const handleBackToMenu = async () => {
     engineRef.current?.setInput('left', false);
     engineRef.current?.setInput('right', false);
     engineRef.current?.setInput('jump', false);
     engineRef.current?.setPaused(true);
     pauseSoundCloudTrack();
-    stopBackgroundMusic();
     setGameStarted(false);
-    await releaseMobileDisplayMode();
+    await releaseGameDisplayMode();
   };
 
   // Handle Replay
@@ -261,7 +293,14 @@ export default function App() {
       </div>
 
       {/* Start Screen */}
-      {!gameStarted && <StartScreen onStart={handleStartGame} />}
+      {!gameStarted && (
+        <StartScreen
+          onStart={handleStartGame}
+          soundCloudReady={soundCloudReady}
+          isFullscreen={isFullscreen}
+          onToggleFullscreen={handleToggleFullscreen}
+        />
+      )}
 
       {/* In-Game HUD */}
       {gameStarted && (
@@ -273,6 +312,8 @@ export default function App() {
           michelleUnlocked={michelleUnlocked}
           isMuted={isMuted}
           onToggleSound={handleToggleSound}
+          isFullscreen={isFullscreen}
+          onToggleFullscreen={handleToggleFullscreen}
           onBackToMenu={handleBackToMenu}
           easterEggs={easterEggs}
           recentEggNotification={recentEggNotification}

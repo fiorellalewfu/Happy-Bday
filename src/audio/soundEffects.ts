@@ -1,8 +1,6 @@
 // Electronic & Deep House inspired sound synthesizer for Jonathan's adventure
 let audioCtx: AudioContext | null = null;
 let isMuted = false;
-let bgMusicInterval: number | null = null;
-let isBgmPlaying = false;
 
 function getAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null;
@@ -20,9 +18,6 @@ function getAudioContext(): AudioContext | null {
 
 export function toggleMute(): boolean {
   isMuted = !isMuted;
-  if (isMuted && isBgmPlaying) {
-    stopBackgroundMusic();
-  }
   return isMuted;
 }
 
@@ -318,58 +313,4 @@ export function playVictoryFanfare() {
       osc.stop(chordTime + (chordIdx === 3 ? 1.5 : 0.5));
     });
   });
-}
-
-// Gentle ambient deep house chord groove (used as fallback when soundcloud is paused or muted)
-export function startBackgroundMusic() {
-  if (isBgmPlaying || isMuted) return;
-  const ctx = getAudioContext();
-  if (!ctx) return;
-
-  isBgmPlaying = true;
-  const chordProgression = [
-    [220.0, 261.63, 329.63], // Am
-    [174.61, 220.0, 261.63], // F
-    [261.63, 329.63, 392.0], // C
-    [196.0, 246.94, 293.66]  // G
-  ];
-  let step = 0;
-
-  bgMusicInterval = window.setInterval(() => {
-    if (isMuted || !isBgmPlaying) return;
-    const now = ctx.currentTime;
-    const chord = chordProgression[step % chordProgression.length];
-    step++;
-
-    chord.forEach((freq) => {
-      const osc = ctx.createOscillator();
-      const filter = ctx.createBiquadFilter();
-      const gain = ctx.createGain();
-
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(freq, now);
-
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(450, now);
-
-      gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(0.02, now + 0.1);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
-
-      osc.connect(filter);
-      filter.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start(now);
-      osc.stop(now + 0.95);
-    });
-  }, 950);
-}
-
-export function stopBackgroundMusic() {
-  if (bgMusicInterval) {
-    clearInterval(bgMusicInterval);
-    bgMusicInterval = null;
-  }
-  isBgmPlaying = false;
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Volume2, VolumeX, Play, Pause, Disc3, Headphones } from 'lucide-react';
+import { ArrowLeft, Volume2, VolumeX, Play, Pause, Disc3, Headphones, Maximize2, Minimize2 } from 'lucide-react';
 import { EasterEgg } from '../types';
 import {
   JONAMS_TRACK_META,
@@ -16,6 +16,8 @@ interface GameHUDProps {
   michelleUnlocked?: boolean;
   isMuted: boolean;
   onToggleSound: () => void;
+  isFullscreen: boolean;
+  onToggleFullscreen: () => void;
   onBackToMenu: () => void;
   easterEggs: EasterEgg[];
   recentEggNotification: EasterEgg | null;
@@ -31,13 +33,15 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   michelleUnlocked,
   isMuted,
   onToggleSound,
+  isFullscreen,
+  onToggleFullscreen,
   onBackToMenu,
   easterEggs,
   recentEggNotification,
   isSuperDJ,
   canFly
 }) => {
-  const [isPlayingSC, setIsPlayingSC] = useState(false);
+  const [isPlayingSC, setIsPlayingSC] = useState(() => isSoundCloudPlaying());
 
   useEffect(() => {
     const unsub = onSoundCloudPlayStateChange((playing) => {
@@ -51,7 +55,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({
   };
 
   return (
-    <div className="absolute inset-x-0 top-3 pointer-events-none z-30 px-3 md:px-6 flex flex-col gap-2 select-none">
+    <div className="game-hud absolute inset-x-0 top-3 pointer-events-none z-30 px-3 md:px-6 flex flex-col gap-2 select-none">
       <div className="flex items-center justify-between gap-2">
         {/* Star Counter & Super DJ Badge */}
         <div className="flex items-center gap-2">
@@ -159,6 +163,16 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             ) : (
               <Volume2 className="w-4 h-4 text-emerald-400" />
             )}
+          </button>
+
+          <button
+            id="btn-toggle-fullscreen"
+            onClick={onToggleFullscreen}
+            aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Ver en pantalla completa'}
+            title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+            className="w-9 h-9 md:w-10 md:h-10 bg-slate-900/85 hover:bg-slate-800 backdrop-blur-md rounded-2xl border border-sky-400/30 text-sky-200 flex items-center justify-center shadow-lg active:scale-95 transition-all cursor-pointer"
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
         </div>
       </div>

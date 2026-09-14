@@ -1,6 +1,15 @@
 @import "tailwindcss";
 
 @layer base {
+  html,
+  body,
+  #root {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+  }
+
   body {
     font-family: 'Outfit', sans-serif;
     overscroll-behavior: none;
@@ -8,9 +17,24 @@
 }
 
 .game-shell {
-  width: 100vw;
-  height: 100vh;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   height: 100dvh;
+  min-height: 100svh;
+}
+
+.game-shell canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+:fullscreen .game-shell,
+:-webkit-full-screen .game-shell {
+  width: 100%;
+  height: 100%;
 }
 
 .font-game {
@@ -140,6 +164,18 @@
   background: linear-gradient(100deg, #fda4af, #fdba74 48%, #60a5fa);
 }
 
+.fullscreen-option {
+  color: #dbeafe;
+  border: 1px solid rgba(96, 165, 250, 0.42);
+  background: rgba(59, 130, 246, 0.13);
+}
+
+.fullscreen-option:hover {
+  color: white;
+  border-color: rgba(147, 197, 253, 0.72);
+  background: rgba(59, 130, 246, 0.24);
+}
+
 .device-mode-picker {
   position: relative;
   z-index: 2;
@@ -259,6 +295,21 @@
   padding-right: max(1rem, env(safe-area-inset-right, 0px));
 }
 
+.game-hud {
+  top: max(0.75rem, env(safe-area-inset-top, 0px));
+  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+}
+
+.start-screen-overlay,
+.letter-modal-overlay,
+.victory-electronic-overlay {
+  padding-top: max(1rem, env(safe-area-inset-top, 0px));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
+}
+
 @keyframes rotate-phone-landscape {
   0%, 18%, 100% { transform: rotate(0deg); }
   48%, 78% { transform: rotate(90deg); }
@@ -301,6 +352,37 @@
   .start-screen-panel .mt-5 {
     margin-top: 0.65rem;
     padding-top: 0.55rem;
+  }
+
+  .letter-modal-overlay,
+  .victory-electronic-overlay {
+    align-items: flex-start;
+    padding-top: max(0.65rem, env(safe-area-inset-top, 0px));
+    padding-bottom: max(0.65rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .letter-modal-panel,
+  .victory-electronic-panel {
+    max-height: calc(100dvh - 1.3rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    margin-block: auto;
+    padding: 1rem 1.25rem;
+  }
+
+  .letter-modal-panel .mt-6 {
+    margin-top: 0.8rem;
+  }
+
+  .touch-controls-shell {
+    bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (pointer: coarse), (max-width: 900px) {
+  .game-hud [class*="backdrop-blur"],
+  .touch-controls-shell [class*="backdrop-blur"] {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
   }
 }
 

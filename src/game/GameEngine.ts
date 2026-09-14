@@ -29,6 +29,11 @@ export class RetroPlatformerEngine {
   private animationFrameId: number | null = null;
   private isPaused = false;
   private callbacks: GameEngineCallbacks;
+  private lastFrameTime = performance.now();
+  private physicsAccumulator = 0;
+  private readonly pixelRatioCap: number;
+  private readonly reducedQuality: boolean;
+  private resizeObserver: ResizeObserver | null = null;
 
   // Player state
   private playerGroup: THREE.Group;
@@ -161,6 +166,14 @@ export class RetroPlatformerEngine {
     this.container = container;
     this.callbacks = callbacks;
 
+    const deviceInfo = navigator as Navigator & { deviceMemory?: number };
+    const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+    this.reducedQuality = coarsePointer
+      || window.innerWidth < 900
+      || (deviceInfo.deviceMemory ?? 8) <= 4
+      || navigator.hardwareConcurrency <= 4;
+    this.pixelRatioCap = this.reducedQuality ? 1 : 1.5;
+
     // Scene with deep twilight & electronic sunset festival atmosphere
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x090d16); // Deep club twilight indigo
@@ -173,11 +186,15 @@ export class RetroPlatformerEngine {
     this.camera.lookAt(0, 3.5, 0);
 
     // Renderer
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: !this.reducedQuality,
+      alpha: false,
+      powerPreference: 'high-performance'
+    });
     this.renderer.setSize(container.clientWidth, container.clientHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.pixelRatioCap));
+    this.renderer.shadowMap.enabled = !this.reducedQuality;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     container.appendChild(this.renderer.domElement);
 
     // Setup Lighting & Lasers
@@ -198,8 +215,13 @@ export class RetroPlatformerEngine {
 
     // Listeners
     window.addEventListener('resize', this.onWindowResize);
+    window.visualViewport?.addEventListener('resize', this.onWindowResize);
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(this.onWindowResize);
+      this.resizeObserver.observe(container);
+    }
 
     // Start loop
     this.animate();
@@ -2622,11 +2644,12 @@ export class RetroPlatformerEngine {
 
   private onWindowResize = () => {
     if (!this.container) return;
-    const w = this.container.clientWidth;
-    const h = this.container.clientHeight;
+    const w = Math.max(1, this.container.clientWidth);
+    const h = Math.max(1, this.container.clientHeight);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(w, h);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.pixelRatioCap));
+    this.renderer.setSize(w, h, false);
   };
 
   private updatePhysics(delta: number, time: number) {
@@ -2662,7 +2685,7 @@ export class RetroPlatformerEngine {
       this.facing = 1;
       this.runCycle += delta * (this.isSuperDJ ? 18 : 14);
     } else {
-      this.playerVel.x *= 0.7; // friction
+      this.playerVel.x *= Math.pow(0.7, delta * 60); // frame-rate independent friction
       this.runCycle = 0;
     }
 
@@ -2817,8 +2840,9 @@ export class RetroPlatformerEngine {
     // Dynamic Camera tracking
     const targetCamX = this.playerPos.x + this.facing * 1.5;
     const targetCamY = Math.max(4.5, this.playerPos.y + 2.5);
-    this.camera.position.x += (targetCamX - this.camera.position.x) * 0.08;
-    this.camera.position.y += (targetCamY - this.camera.position.y) * 0.08;
+    const cameraFollow = 1 - Math.pow(1 - 0.08, delta * 60);
+    this.camera.position.x += (targetCamX - this.camera.position.x) * cameraFollow;
+    this.camera.position.y += (targetCamY - this.camera.position.y) * cameraFollow;
     this.camera.lookAt(this.camera.position.x, this.camera.position.y - 1, 0);
 
     // Check Star Intersections
@@ -3018,9 +3042,10 @@ export class RetroPlatformerEngine {
     const targetCamX = 158.0 + Math.sin(time * 0.35) * 0.6;
     const targetCamY = 11.2;
     const targetCamZ = 6.4;
-    this.camera.position.x += (targetCamX - this.camera.position.x) * 0.06;
-    this.camera.position.y += (targetCamY - this.camera.position.y) * 0.06;
-    this.camera.position.z += (targetCamZ - this.camera.position.z) * 0.06;
+    const cameraFollow = 1 - Math.pow(1 - 0.06, _delta * 60);
+    this.camera.position.x += (targetCamX - this.camera.position.x) * cameraFollow;
+    this.camera.position.y += (targetCamY - this.camera.position.y) * cameraFollow;
+    this.camera.position.z += (targetCamZ - this.camera.position.z) * cameraFollow;
     this.camera.lookAt(158.0, 10.7, 0.4);
   }
 
@@ -3057,10 +3082,12 @@ export class RetroPlatformerEngine {
     return this.isFinalSetDJing;
   }
 
-  private animate = () => {
+  private animate = (frameTime = performance.now()) => {
     this.animationFrameId = requestAnimationFrame(this.animate);
-    const delta = 0.016;
-    const time = Date.now() * 0.001;
+    const delta = Math.min(Math.max((frameTime - this.lastFrameTime) / 1000, 1 / 240), 0.1);
+    const frameScale = delta * 60;
+    const time = frameTime * 0.001;
+    this.lastFrameTime = frameTime;
 
     // Rotate spinning golden stars and soundwave rings
     for (const star of this.stars) {
@@ -3078,14 +3105,14 @@ export class RetroPlatformerEngine {
           const maplePulse = 1 + Math.sin(time * 3.1) * 0.045;
           star.mesh.scale.setScalar(maplePulse);
         } else {
-          star.mesh.rotation.y += 0.035;
+          star.mesh.rotation.y += 0.035 * frameScale;
           if (star.index === 3) {
             star.mesh.rotation.z = Math.sin(time * 2.4) * 0.09;
           }
         }
         star.mesh.position.y = star.y + Math.sin(time * 3 + star.index) * 0.22;
         star.rings.forEach((ring, rIdx) => {
-          ring.rotation.z += 0.02 * (rIdx === 0 ? 1 : -1);
+          ring.rotation.z += 0.02 * frameScale * (rIdx === 0 ? 1 : -1);
           const scale = 1 + Math.sin(time * 5 + rIdx) * 0.12;
           ring.scale.set(scale, scale, scale);
         });
@@ -3095,7 +3122,7 @@ export class RetroPlatformerEngine {
     // Secondary vinyls spin and shimmer more subtly than the letter collectibles.
     for (const disc of this.musicDiscs) {
       if (!disc.collected) {
-        disc.mesh.rotation.z += 0.045;
+        disc.mesh.rotation.z += 0.045 * frameScale;
         disc.mesh.rotation.y = Math.sin(time * 1.8 + disc.index) * 0.18;
         disc.mesh.position.y = disc.y + Math.sin(time * 3 + disc.index) * 0.12;
         const pulse = 1 + Math.sin(time * 4 + disc.index) * 0.08;
@@ -3126,7 +3153,7 @@ export class RetroPlatformerEngine {
       this.michelleRightArm.rotation.x = -Math.sin(time * 7.2) * 0.22;
       this.michelleLeftWing.rotation.y = Math.sin(time * 4.4) * 0.28;
       this.michelleRightWing.rotation.y = -Math.sin(time * 4.4) * 0.28;
-      this.michelleHalo.rotation.z += 0.012;
+      this.michelleHalo.rotation.z += 0.012 * frameScale;
 
       // Her face gently turns toward Jonathan wherever he is on the stage.
       const jonathanOffset = this.playerGroup.position.x - this.michelleGroup.position.x;
@@ -3135,7 +3162,7 @@ export class RetroPlatformerEngine {
       this.michelleHeadGroup.rotation.y = THREE.MathUtils.lerp(
         this.michelleHeadGroup.rotation.y,
         targetLookAngle,
-        0.09
+        1 - Math.pow(1 - 0.09, frameScale)
       );
       this.michelleHeadGroup.rotation.z = Math.sin(time * 2.6) * 0.035;
       this.michelleKiss.scale.setScalar(1 + Math.sin(time * 5) * 0.12);
@@ -3193,7 +3220,7 @@ export class RetroPlatformerEngine {
 
     // Animate Easter eggs
     for (const egg of this.easterEggs) {
-      egg.mesh.rotation.y += 0.02;
+      egg.mesh.rotation.y += 0.02 * frameScale;
       egg.mesh.position.y = egg.data.y + Math.sin(time * 2 + egg.mesh.id) * 0.14;
     }
 
@@ -3211,13 +3238,13 @@ export class RetroPlatformerEngine {
 
       // Rotating Starburst Flare Cross Rays
       for (const flare of this.parentFlareRaysA) {
-        flare.rotation.z += 0.008;
+        flare.rotation.z += 0.008 * frameScale;
         const s = 1 + destelloA * 0.65;
         flare.scale.set(s, s, 1);
         (flare.material as THREE.MeshBasicMaterial).opacity = 0.65 + destelloA * 0.35;
       }
       for (const flare of this.parentFlareRaysB) {
-        flare.rotation.z -= 0.007;
+        flare.rotation.z -= 0.007 * frameScale;
         const s = 1 + destelloB * 0.65;
         flare.scale.set(s, s, 1);
         (flare.material as THREE.MeshBasicMaterial).opacity = 0.65 + destelloB * 0.35;
@@ -3227,12 +3254,12 @@ export class RetroPlatformerEngine {
       for (let r = 0; r < this.parentHaloRingsA.length; r++) {
         const ringScale = 1 + Math.sin(time * 4 + r * 1.2) * 0.18;
         this.parentHaloRingsA[r].scale.set(ringScale, ringScale, ringScale);
-        this.parentHaloRingsA[r].rotation.z += 0.015;
+        this.parentHaloRingsA[r].rotation.z += 0.015 * frameScale;
       }
       for (let r = 0; r < this.parentHaloRingsB.length; r++) {
         const ringScale = 1 + Math.sin(time * 4 + r * 1.2 + 1) * 0.18;
         this.parentHaloRingsB[r].scale.set(ringScale, ringScale, ringScale);
-        this.parentHaloRingsB[r].rotation.z -= 0.015;
+        this.parentHaloRingsB[r].rotation.z -= 0.015 * frameScale;
       }
 
       // God-Rays breathing celestial light
@@ -3249,8 +3276,8 @@ export class RetroPlatformerEngine {
         spark.mesh.position.x = Math.cos(spark.angle) * spark.radius;
         spark.mesh.position.z = Math.sin(spark.angle) * (spark.radius * 0.7);
         spark.mesh.position.y = spark.heightOffset + Math.sin(spark.angle * 2.5) * 0.3;
-        spark.mesh.rotation.x += 0.05;
-        spark.mesh.rotation.y += 0.05;
+        spark.mesh.rotation.x += 0.05 * frameScale;
+        spark.mesh.rotation.y += 0.05 * frameScale;
       }
     }
 
@@ -3270,7 +3297,7 @@ export class RetroPlatformerEngine {
         const scale = revealEase * (0.75 + twinkle * 0.5);
         star.mesh.scale.setScalar(scale);
         (star.mesh.material as THREE.MeshBasicMaterial).opacity = revealEase * (0.58 + twinkle * 0.42);
-        star.mesh.rotation.z += 0.012;
+        star.mesh.rotation.z += 0.012 * frameScale;
       }
 
       for (const material of this.constellationLineMaterials) {
@@ -3333,16 +3360,16 @@ export class RetroPlatformerEngine {
       this.auraPointLight.color = rainbowColor;
       this.auraPointLight.intensity = 3.0 + Math.sin(time * 12) * 1.2;
 
-      this.auraShieldA.rotation.z += 0.06;
-      this.auraShieldA.rotation.y += 0.04;
-      this.auraShieldB.rotation.x += 0.05;
-      this.auraShieldB.rotation.z -= 0.04;
+      this.auraShieldA.rotation.z += 0.06 * frameScale;
+      this.auraShieldA.rotation.y += 0.04 * frameScale;
+      this.auraShieldB.rotation.x += 0.05 * frameScale;
+      this.auraShieldB.rotation.z -= 0.04 * frameScale;
 
       const auraPulse = 1.0 + Math.sin(time * 10) * 0.1;
       this.auraShieldA.scale.set(auraPulse, auraPulse, auraPulse);
       this.auraShieldB.scale.set(auraPulse, auraPulse, auraPulse);
 
-      this.auraCrownStar.rotation.y += 0.08;
+      this.auraCrownStar.rotation.y += 0.08 * frameScale;
       this.auraCrownStar.position.y = 2.75 + Math.sin(time * 6) * 0.12;
 
       for (const cup of this.headphoneCups) {
@@ -3378,8 +3405,15 @@ export class RetroPlatformerEngine {
       }
     }
 
-    this.updatePhysics(delta, time);
-    this.updateBrotherCompanion(delta, time);
+    // Fixed simulation steps keep movement identical at 60, 30 or even 10 FPS
+    // and avoid tunnelling through narrow collectibles on slower browsers.
+    const fixedStep = 1 / 60;
+    this.physicsAccumulator = Math.min(this.physicsAccumulator + delta, 0.1);
+    while (this.physicsAccumulator >= fixedStep) {
+      this.updatePhysics(fixedStep, time);
+      this.updateBrotherCompanion(fixedStep, time);
+      this.physicsAccumulator -= fixedStep;
+    }
     this.renderer.render(this.scene, this.camera);
   };
 
@@ -3388,8 +3422,10 @@ export class RetroPlatformerEngine {
       cancelAnimationFrame(this.animationFrameId);
     }
     window.removeEventListener('resize', this.onWindowResize);
+    window.visualViewport?.removeEventListener('resize', this.onWindowResize);
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('keyup', this.onKeyUp);
+    this.resizeObserver?.disconnect();
 
     if (this.renderer && this.renderer.domElement) {
       this.renderer.domElement.remove();

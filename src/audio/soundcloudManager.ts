@@ -48,21 +48,33 @@ export const JONAMS_TRACK_META: TrackMeta = {
 let activeWidget: SoundCloudWidget | null = null;
 let isWidgetReady = false;
 let isTrackPlaying = false;
+let playbackRequested = false;
 let listeners: ((playing: boolean) => void)[] = [];
 
-export function registerSoundCloudWidget(iframe: HTMLIFrameElement, onReady?: () => void) {
-  if (typeof window === 'undefined') return;
+export function registerSoundCloudWidget(iframe: HTMLIFrameElement, onReady?: () => void): () => void {
+  if (typeof window === 'undefined') return () => undefined;
+
+  let cancelled = false;
+  let retryTimer: number | null = null;
+  let widget: SoundCloudWidget | null = null;
 
   const init = () => {
+    if (cancelled) return;
+
     if (window.SC && window.SC.Widget) {
       try {
-        const widget = window.SC.Widget(iframe);
+        widget = window.SC.Widget(iframe);
         activeWidget = widget;
 
         widget.bind(window.SC.Widget.Events.READY, () => {
+          if (cancelled || !widget) return;
           isWidgetReady = true;
           widget.setVolume(85);
           if (onReady) onReady();
+
+          if (playbackRequested) {
+            widget.play();
+          }
         });
 
         widget.bind(window.SC.Widget.Events.PLAY, () => {
@@ -77,45 +89,67 @@ export function registerSoundCloudWidget(iframe: HTMLIFrameElement, onReady?: ()
 
         widget.bind(window.SC.Widget.Events.FINISH, () => {
           isTrackPlaying = false;
+          playbackRequested = false;
+          notifyListeners(false);
+        });
+
+        widget.bind(window.SC.Widget.Events.ERROR, () => {
+          isWidgetReady = false;
+          isTrackPlaying = false;
           notifyListeners(false);
         });
       } catch (err) {
         console.warn("SoundCloud Widget initialization note:", err);
       }
     } else {
-      setTimeout(init, 300);
+      retryTimer = window.setTimeout(init, 300);
     }
   };
 
   init();
+
+  return () => {
+    cancelled = true;
+    if (retryTimer !== null) window.clearTimeout(retryTimer);
+
+    if (widget && window.SC?.Widget) {
+      widget.unbind(window.SC.Widget.Events.READY);
+      widget.unbind(window.SC.Widget.Events.PLAY);
+      widget.unbind(window.SC.Widget.Events.PAUSE);
+      widget.unbind(window.SC.Widget.Events.FINISH);
+      widget.unbind(window.SC.Widget.Events.ERROR);
+    }
+
+    if (activeWidget === widget) {
+      activeWidget = null;
+      isWidgetReady = false;
+      isTrackPlaying = false;
+    }
+  };
 }
 
 export function playSoundCloudTrack() {
+  playbackRequested = true;
   if (activeWidget && isWidgetReady) {
     activeWidget.play();
-    isTrackPlaying = true;
-    notifyListeners(true);
   }
 }
 
 export function pauseSoundCloudTrack() {
+  playbackRequested = false;
   if (activeWidget && isWidgetReady) {
     activeWidget.pause();
-    isTrackPlaying = false;
-    notifyListeners(false);
   }
 }
 
 export function toggleSoundCloudTrack(): boolean {
-  if (activeWidget && isWidgetReady) {
-    if (isTrackPlaying) {
-      activeWidget.pause();
-    } else {
-      activeWidget.play();
-    }
-    return !isTrackPlaying;
+  if (playbackRequested || isTrackPlaying) {
+    pauseSoundCloudTrack();
+    return false;
   }
-  return false;
+
+  playSoundCloudTrack();
+  return true;
 }
 
 export function setSoundCloudVolume(volume: number) {
