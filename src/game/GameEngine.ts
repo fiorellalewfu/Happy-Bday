@@ -115,7 +115,6 @@ export class RetroPlatformerEngine {
   private michelleRightArm!: THREE.Mesh;
   private michelleLeftWing!: THREE.Group;
   private michelleRightWing!: THREE.Group;
-  private michelleHalo!: THREE.Mesh;
   private michelleFinalShades!: THREE.Mesh;
   private michelleKiss!: THREE.Group;
   private michelleUnlocked = false;
@@ -1129,18 +1128,11 @@ export class RetroPlatformerEngine {
     const legRight = new THREE.Mesh(legGeometry, skinMaterial);
     legRight.position.set(0.17, 0.12, 0);
 
-    this.michelleHalo = new THREE.Mesh(
-      new THREE.TorusGeometry(0.42, 0.035, 8, 36),
-      new THREE.MeshBasicMaterial({ color: 0xfef08a })
-    );
-    this.michelleHalo.position.set(0, 2.43, 0);
-    this.michelleHalo.rotation.x = 1.15;
-
     this.michelleAvatarGroup.add(
       this.michelleLeftWing, this.michelleRightWing,
       hairBack, hairLeft, hairRight, torso, skirt, waistband,
       this.michelleLeftArm, this.michelleRightArm, legLeft, legRight,
-      this.michelleHeadGroup, this.michelleHalo
+      this.michelleHeadGroup
     );
     this.michelleGroup.add(this.michelleAvatarGroup);
 
@@ -3170,7 +3162,6 @@ export class RetroPlatformerEngine {
       this.michelleRightArm.rotation.x = -Math.sin(time * 7.2) * 0.22;
       this.michelleLeftWing.rotation.y = Math.sin(time * 4.4) * 0.28;
       this.michelleRightWing.rotation.y = -Math.sin(time * 4.4) * 0.28;
-      this.michelleHalo.rotation.z += 0.012 * frameScale;
 
       // Her face gently turns toward Jonathan wherever he is on the stage.
       const jonathanOffset = this.playerGroup.position.x - this.michelleGroup.position.x;
