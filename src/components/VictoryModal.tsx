@@ -20,7 +20,13 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ onRestart }) => {
     // Trigger celebratory festival fireworks
     const duration = 4.5 * 1000;
     const animationEnd = Date.now() + duration;
-    const defaults = { startVelocity: 32, spread: 360, ticks: 75, zIndex: 9999 };
+    const defaults = {
+      startVelocity: 32,
+      spread: 360,
+      ticks: 75,
+      zIndex: 9999,
+      colors: ['#7e22ce', '#fb7185', '#fb923c', '#3b82f6', '#f8fafc']
+    };
 
     const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
 
@@ -43,7 +49,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ onRestart }) => {
       <motion.div
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-wrap items-center justify-center gap-3 px-5 py-3 rounded-2xl bg-slate-900/90 border border-amber-400/60 backdrop-blur-md shadow-2xl max-w-[94vw]"
+        className="victory-live-banner fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-wrap items-center justify-center gap-3 px-5 py-3 rounded-2xl backdrop-blur-md shadow-2xl max-w-[94vw]"
       >
         <div className="flex items-center gap-2.5 text-amber-300 font-game text-xs sm:text-sm mr-2">
           <span className="relative flex h-2.5 w-2.5">
@@ -51,7 +57,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ onRestart }) => {
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
           </span>
           <span className="uppercase tracking-wider">
-            EN VIVO: JONATHAN EN EL MAINSTAGE
+            EN VIVO: JONATHAN, SU BRO Y MICHELLE
           </span>
         </div>
 
@@ -59,7 +65,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ onRestart }) => {
           <button
             id="btn-back-to-summary"
             onClick={() => setViewMode('summary')}
-            className="px-4 py-2 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-slate-950 font-game text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer uppercase font-bold"
+            className="victory-primary-button px-4 py-2 text-slate-950 font-game text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer uppercase font-bold"
           >
             <span>Mensaje & Carta</span>
           </button>
@@ -78,31 +84,31 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ onRestart }) => {
   }
 
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-xs overflow-y-auto">
+    <div className="victory-electronic-overlay absolute inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-xs overflow-y-auto">
       <motion.div
         initial={{ scale: 0.85, opacity: 0, y: 30 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         transition={{ type: 'spring', damping: 20, stiffness: 240 }}
-        className="w-full max-w-2xl house-panel rounded-3xl p-6 md:p-8 text-slate-100 relative my-auto shadow-2xl border border-amber-400/40"
+        className="victory-electronic-panel w-full max-w-2xl house-panel rounded-3xl p-6 md:p-8 text-slate-100 relative my-auto shadow-2xl"
       >
         {/* Header Ribbon */}
         <div className="text-center mb-6">
-          <div className="inline-block bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-slate-950 font-game px-6 py-2 rounded-2xl shadow-lg border border-amber-200 mb-2">
+          <div className="victory-ribbon inline-block text-slate-950 font-game px-6 py-2 rounded-2xl shadow-lg mb-2">
             <h1 className="text-xl md:text-2xl tracking-wider uppercase">
-              ¡Misión Cumplida, Jonathan!
+              ¡Feliz Cumpleaños, Tatán! 🪻
             </h1>
           </div>
-          <p className="text-amber-400 text-xs md:text-sm font-semibold tracking-wider font-display uppercase">
-            Las 5 Estrellas Han Sido Reunidas • Jonathan en la Mesa DJ
+          <p className="victory-kicker text-xs md:text-sm font-semibold tracking-wider font-display uppercase">
+            Los 5 Recuerdos Han Sido Reunidos • Jonathan en la Mesa DJ
           </p>
         </div>
 
         {/* Modal Body */}
         {viewMode === 'summary' ? (
           <div className="space-y-4">
-            <div className="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/60 text-center">
-              <h2 className="font-game text-xl text-white mb-2">
-                ¡Feliz Cumpleaños, Hermano!
+            <div className="victory-message-card p-5 rounded-2xl text-center">
+              <h2 className="font-game text-xl md:text-2xl text-white mb-2">
+                Con todo el flow, tu Sis Fio desde Canadá 😎 🪻
               </h2>
               <p className="text-sm md:text-base text-slate-300 leading-relaxed">
                 Has recorrido cada plataforma, superado cada salto y alcanzado la cabina del Mainstage.
@@ -111,17 +117,17 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ onRestart }) => {
             </div>
 
             {/* Live DJ Showcase Action */}
-            <div className="p-4 rounded-2xl bg-gradient-to-r from-cyan-950/70 via-slate-900/90 to-amber-950/60 border border-cyan-400/40 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
+            <div className="victory-dj-card p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center shrink-0">
+                <div className="victory-disc-icon w-12 h-12 rounded-xl flex items-center justify-center shrink-0">
                   <Disc3 className="w-7 h-7 text-cyan-400 animate-spin" />
                 </div>
                 <div>
                   <div className="text-sm text-cyan-300 font-game uppercase">
-                    Jonathan está mezclando en vivo
+                    Los tres están celebrando en vivo
                   </div>
                   <div className="text-xs text-slate-300">
-                    Mira a Jonathan detrás de los CDJs con sus audífonos y luces de festival.
+                    Jonathan mezcla mientras su bro y Michelle bailan a su lado con sus gafas cool.
                   </div>
                 </div>
               </div>
@@ -129,14 +135,14 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ onRestart }) => {
               <button
                 id="btn-view-dj-live"
                 onClick={() => setViewMode('live-dj')}
-                className="w-full sm:w-auto px-4 py-2.5 bg-gradient-to-r from-cyan-400 to-sky-400 hover:from-cyan-300 hover:to-sky-300 text-slate-950 font-game text-xs rounded-xl shadow flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 uppercase font-bold"
+                className="victory-electric-button w-full sm:w-auto px-4 py-2.5 text-slate-950 font-game text-xs rounded-xl shadow flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 uppercase font-bold"
               >
-                <span>Ver Set en Vivo</span>
+                <span>Ver a los tres</span>
               </button>
             </div>
 
             {/* SoundCloud Track Banner */}
-            <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-800/90 to-amber-950/40 border border-amber-400/30 flex items-center justify-between gap-3">
+            <div className="victory-soundcloud-card p-4 rounded-2xl flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-amber-400/40 shadow">
                   <img
@@ -160,7 +166,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ onRestart }) => {
                 href={JONAMS_TRACK_META.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="shrink-0 px-3.5 py-2 bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors border border-amber-400/30"
+                className="victory-soundcloud-link shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
               >
                 <span>SoundCloud</span>
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -180,7 +186,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ onRestart }) => {
               <button
                 id="btn-restart-game"
                 onClick={onRestart}
-                className="w-full sm:w-auto px-6 py-3.5 bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-slate-950 font-game text-base rounded-2xl retro-btn shadow-xl flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 uppercase"
+                className="victory-primary-button w-full sm:w-auto px-6 py-3.5 text-slate-950 font-game text-base rounded-2xl retro-btn shadow-xl flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 uppercase"
               >
                 <RotateCcw className="w-5 h-5" />
                 <span>Jugar de Nuevo</span>
@@ -247,7 +253,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ onRestart }) => {
                     Con todo mi amor siempre,
                   </p>
                   <p className="font-semibold text-2xl sm:text-3xl text-stone-900">
-                    Tu hermana
+                    Tu hermana Fio 🪻
                   </p>
                 </div>
               </div>
@@ -257,13 +263,13 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ onRestart }) => {
             <div className="pt-3 border-t border-slate-700/60 flex flex-wrap items-center justify-between gap-2">
               <button
                 onClick={() => setViewMode('live-dj')}
-                className="px-4 py-2.5 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 font-display text-xs font-semibold rounded-xl border border-cyan-400/40 transition-all cursor-pointer"
+                className="victory-electric-outline px-4 py-2.5 font-display text-xs font-semibold rounded-xl transition-all cursor-pointer"
               >
                 Ver Set en Vivo en el Mainstage
               </button>
               <button
                 onClick={() => setViewMode('summary')}
-                className="px-5 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-game text-sm rounded-xl transition-all cursor-pointer shadow-md"
+                className="victory-primary-button px-5 py-2.5 text-slate-950 font-game text-sm rounded-xl transition-all cursor-pointer shadow-md"
               >
                 Cerrar Carta
               </button>

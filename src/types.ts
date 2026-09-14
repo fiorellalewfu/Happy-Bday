@@ -29,6 +29,8 @@ export interface GameEngineCallbacks {
   onEasterEggFound: (egg: EasterEgg) => void;
   onReachGoal: () => void;
   onStarCountUpdate: (count: number) => void;
+  onDiscCountUpdate?: (count: number) => void;
+  onMichelleUnlocked?: () => void;
   onEvolution?: () => void;
   onFlightUnlocked?: () => void;
 }

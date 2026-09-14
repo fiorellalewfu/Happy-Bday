@@ -3,7 +3,14 @@
 @layer base {
   body {
     font-family: 'Outfit', sans-serif;
+    overscroll-behavior: none;
   }
+}
+
+.game-shell {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
 }
 
 .font-game {
@@ -48,6 +55,1110 @@
   box-shadow: 0 10px 35px -5px rgba(0, 0, 0, 0.6), 0 0 25px rgba(234, 179, 8, 0.12);
 }
 
+/* Opening celebration: layered fireworks stay behind the start card. */
+.start-screen-overlay {
+  background:
+    radial-gradient(circle at 18% 78%, rgba(59, 130, 246, 0.2), transparent 34%),
+    radial-gradient(circle at 82% 18%, rgba(251, 113, 133, 0.17), transparent 35%),
+    linear-gradient(155deg, rgba(30, 8, 45, 0.9), rgba(49, 12, 53, 0.87) 52%, rgba(7, 23, 54, 0.91));
+}
+
+.start-screen-panel {
+  z-index: 2;
+  background:
+    radial-gradient(circle at 86% 6%, rgba(251, 113, 133, 0.12), transparent 30%),
+    radial-gradient(circle at 6% 94%, rgba(59, 130, 246, 0.13), transparent 32%),
+    linear-gradient(145deg, rgba(48, 15, 55, 0.96), rgba(29, 12, 46, 0.97));
+  border-color: rgba(251, 146, 60, 0.52);
+  box-shadow:
+    0 18px 55px -12px rgba(0, 0, 0, 0.88),
+    0 0 30px rgba(251, 113, 133, 0.2),
+    0 0 62px rgba(59, 130, 246, 0.13);
+}
+
+.start-glow-coral {
+  background: rgba(251, 113, 133, 0.28);
+}
+
+.start-glow-electric {
+  background: rgba(59, 130, 246, 0.27);
+}
+
+.birthday-cake-emblem {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 4.25rem;
+  height: 4.25rem;
+  font-size: 2.55rem;
+  line-height: 1;
+  border-radius: 1.25rem;
+  background: linear-gradient(145deg, rgba(251, 113, 133, 0.2), rgba(59, 130, 246, 0.17));
+  border: 1px solid rgba(251, 146, 60, 0.52);
+  box-shadow: 0 0 20px rgba(251, 113, 133, 0.25), inset 0 0 14px rgba(255, 255, 255, 0.05);
+}
+
+.start-screen-title {
+  text-shadow: 0 0 13px rgba(251, 113, 133, 0.46), 0 0 27px rgba(59, 130, 246, 0.28);
+}
+
+.start-screen-panel .text-amber-400 {
+  color: #fb7185;
+}
+
+.start-screen-panel .text-amber-300 {
+  color: #fdba74;
+}
+
+.start-screen-panel .border-amber-400\/30,
+.start-screen-panel .border-amber-400\/40 {
+  border-color: rgba(251, 113, 133, 0.38);
+}
+
+.start-screen-panel .bg-slate-800\/80 {
+  background: rgba(51, 21, 58, 0.78);
+  border-color: rgba(251, 113, 133, 0.2);
+}
+
+.start-screen-panel .bg-slate-900 {
+  background: rgba(24, 12, 40, 0.9);
+}
+
+.start-screen-panel .bg-amber-400 {
+  background: #3b82f6;
+  box-shadow: 0 0 7px rgba(59, 130, 246, 0.72);
+}
+
+.start-screen-panel #btn-start-adventure {
+  background: linear-gradient(100deg, #fb7185, #fb923c 48%, #3b82f6);
+  color: #240b2d;
+  box-shadow: 0 8px 0 rgba(23, 8, 34, 0.58), 0 0 24px rgba(251, 113, 133, 0.25);
+}
+
+.start-screen-panel #btn-start-adventure:hover {
+  background: linear-gradient(100deg, #fda4af, #fdba74 48%, #60a5fa);
+}
+
+.device-mode-picker {
+  position: relative;
+  z-index: 2;
+  padding: 0.7rem;
+  border-radius: 1rem;
+  background: rgba(27, 11, 45, 0.62);
+  border: 1px solid rgba(251, 113, 133, 0.2);
+}
+
+.device-mode-label {
+  color: #cbd5e1;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.device-mode-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.8rem;
+  padding: 0.55rem 0.75rem;
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 0.75rem;
+  background: rgba(15, 23, 42, 0.55);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 140ms ease, color 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.device-mode-option:hover {
+  color: white;
+  border-color: rgba(251, 146, 60, 0.48);
+}
+
+.device-mode-option.is-selected {
+  color: #fff7ed;
+  border-color: rgba(251, 146, 60, 0.72);
+  background: linear-gradient(105deg, rgba(251, 113, 133, 0.28), rgba(59, 130, 246, 0.25));
+  box-shadow: 0 0 15px rgba(251, 113, 133, 0.14);
+  transform: translateY(-1px);
+}
+
+.device-mode-option small {
+  color: #93c5fd;
+  font-size: 0.58rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.mobile-mode-hint {
+  color: #93c5fd;
+}
+
+.rotate-device-overlay {
+  background:
+    radial-gradient(circle at 18% 78%, rgba(59, 130, 246, 0.22), transparent 38%),
+    radial-gradient(circle at 82% 20%, rgba(251, 113, 133, 0.2), transparent 38%),
+    rgba(24, 7, 38, 0.96);
+  backdrop-filter: blur(16px);
+}
+
+.rotate-device-card {
+  background: linear-gradient(145deg, rgba(63, 20, 70, 0.96), rgba(24, 16, 54, 0.97));
+  border: 1px solid rgba(251, 146, 60, 0.55);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55), 0 0 28px rgba(59, 130, 246, 0.18);
+}
+
+.rotate-phone-visual {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 5.5rem;
+  height: 5.5rem;
+  color: #fb923c;
+  border-radius: 1.5rem;
+  background: rgba(251, 113, 133, 0.12);
+  border: 1px solid rgba(251, 113, 133, 0.3);
+  animation: rotate-phone-landscape 2.2s ease-in-out infinite;
+}
+
+.rotate-phone-arrow {
+  position: absolute;
+  right: -0.8rem;
+  top: -0.5rem;
+  color: #60a5fa;
+}
+
+.rotate-back-button {
+  color: #2a0b2e;
+  background: linear-gradient(100deg, #fb7185, #fb923c 55%, #60a5fa);
+  box-shadow: 0 6px 0 rgba(15, 6, 25, 0.52), 0 0 18px rgba(251, 113, 133, 0.2);
+}
+
+.rotate-back-button:hover {
+  background: linear-gradient(100deg, #fda4af, #fdba74 55%, #93c5fd);
+}
+
+.game-back-button {
+  border-color: rgba(251, 146, 60, 0.38);
+}
+
+.game-back-button:hover {
+  border-color: rgba(251, 146, 60, 0.65);
+  box-shadow: 0 0 15px rgba(251, 113, 133, 0.16);
+}
+
+.touch-controls-shell {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+}
+
+@keyframes rotate-phone-landscape {
+  0%, 18%, 100% { transform: rotate(0deg); }
+  48%, 78% { transform: rotate(90deg); }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .start-screen-overlay {
+    align-items: flex-start;
+    padding: 0.55rem max(0.75rem, env(safe-area-inset-right, 0px)) 0.55rem max(0.75rem, env(safe-area-inset-left, 0px));
+  }
+
+  .start-screen-panel {
+    max-width: 42rem;
+    margin-block: auto;
+    padding: 0.8rem 1.25rem;
+  }
+
+  .birthday-cake-emblem {
+    width: 3rem;
+    height: 3rem;
+    margin-bottom: 0.35rem;
+    font-size: 1.85rem;
+  }
+
+  .start-screen-title {
+    margin-bottom: 0.65rem;
+    font-size: 1.75rem;
+  }
+
+  .device-mode-picker,
+  .start-screen-panel .mb-6 {
+    margin-bottom: 0.65rem;
+  }
+
+  .start-screen-panel #btn-start-adventure {
+    padding-block: 0.65rem;
+    font-size: 1rem;
+  }
+
+  .start-screen-panel .mt-5 {
+    margin-top: 0.65rem;
+    padding-top: 0.55rem;
+  }
+}
+
+/* Final celebration mirrors the electronic-sunset palette from the opening. */
+.victory-electronic-overlay {
+  background:
+    radial-gradient(circle at 14% 82%, rgba(59, 130, 246, 0.18), transparent 35%),
+    radial-gradient(circle at 88% 15%, rgba(251, 113, 133, 0.16), transparent 34%),
+    rgba(20, 5, 34, 0.76);
+}
+
+.victory-electronic-panel {
+  background:
+    radial-gradient(circle at 88% 6%, rgba(251, 113, 133, 0.13), transparent 29%),
+    radial-gradient(circle at 4% 96%, rgba(59, 130, 246, 0.13), transparent 33%),
+    linear-gradient(145deg, rgba(49, 15, 56, 0.97), rgba(27, 11, 45, 0.98));
+  border-color: rgba(251, 146, 60, 0.52);
+  box-shadow:
+    0 20px 58px -14px rgba(0, 0, 0, 0.9),
+    0 0 32px rgba(251, 113, 133, 0.2),
+    0 0 64px rgba(59, 130, 246, 0.12);
+}
+
+.victory-ribbon {
+  background: linear-gradient(100deg, #fb7185, #fb923c 48%, #3b82f6);
+  border: 1px solid rgba(254, 215, 170, 0.72);
+  box-shadow: 0 0 23px rgba(251, 113, 133, 0.32), 0 8px 20px rgba(15, 6, 25, 0.35);
+}
+
+.victory-kicker {
+  color: #fdba74;
+}
+
+.victory-message-card {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(251, 146, 60, 0.13), transparent 45%),
+    linear-gradient(135deg, rgba(67, 25, 72, 0.84), rgba(39, 16, 57, 0.88));
+  border: 1px solid rgba(251, 113, 133, 0.28);
+  box-shadow: inset 0 0 24px rgba(59, 130, 246, 0.045);
+}
+
+.victory-message-card h2 {
+  color: #fff7ed;
+  text-shadow: 0 0 11px rgba(251, 113, 133, 0.45), 0 0 22px rgba(59, 130, 246, 0.24);
+}
+
+.victory-dj-card {
+  background: linear-gradient(105deg, rgba(30, 58, 138, 0.55), rgba(43, 17, 57, 0.9) 52%, rgba(127, 29, 29, 0.56));
+  border: 1px solid rgba(96, 165, 250, 0.42);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25), inset 0 0 20px rgba(59, 130, 246, 0.06);
+}
+
+.victory-disc-icon {
+  color: #60a5fa;
+  background: rgba(59, 130, 246, 0.17);
+  border: 1px solid rgba(96, 165, 250, 0.52);
+  box-shadow: 0 0 16px rgba(59, 130, 246, 0.24);
+}
+
+.victory-electric-button {
+  background: linear-gradient(100deg, #38bdf8, #3b82f6);
+  color: #0f172a;
+}
+
+.victory-electric-button:hover {
+  background: linear-gradient(100deg, #7dd3fc, #60a5fa);
+}
+
+.victory-soundcloud-card {
+  background: linear-gradient(105deg, rgba(62, 25, 70, 0.9), rgba(124, 45, 18, 0.5));
+  border: 1px solid rgba(251, 146, 60, 0.34);
+}
+
+.victory-soundcloud-link {
+  color: #fed7aa;
+  background: rgba(251, 146, 60, 0.14);
+  border: 1px solid rgba(251, 146, 60, 0.34);
+}
+
+.victory-soundcloud-link:hover {
+  color: #fff7ed;
+  background: rgba(251, 146, 60, 0.25);
+}
+
+.victory-primary-button {
+  background: linear-gradient(100deg, #fb7185, #fb923c 48%, #3b82f6);
+  color: #240b2d;
+}
+
+.victory-primary-button:hover {
+  background: linear-gradient(100deg, #fda4af, #fdba74 48%, #60a5fa);
+}
+
+.victory-electric-outline {
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.14);
+  border: 1px solid rgba(96, 165, 250, 0.4);
+}
+
+.victory-electric-outline:hover {
+  color: #dbeafe;
+  background: rgba(59, 130, 246, 0.24);
+}
+
+.victory-electronic-panel .text-amber-400,
+.victory-electronic-panel .text-amber-300 {
+  color: #fdba74;
+}
+
+.victory-electronic-panel .text-cyan-300,
+.victory-electronic-panel .text-cyan-400 {
+  color: #60a5fa;
+}
+
+.victory-electronic-panel #btn-read-full-letter {
+  background: rgba(64, 27, 75, 0.85);
+  border-color: rgba(251, 113, 133, 0.3);
+}
+
+.victory-electronic-panel #btn-read-full-letter:hover {
+  background: rgba(84, 31, 91, 0.92);
+}
+
+.victory-live-banner {
+  background: linear-gradient(105deg, rgba(45, 16, 57, 0.94), rgba(24, 24, 63, 0.95));
+  border: 1px solid rgba(251, 146, 60, 0.55);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55), 0 0 24px rgba(59, 130, 246, 0.18);
+}
+
+.victory-live-banner .text-amber-300 {
+  color: #fdba74;
+}
+
+.opening-fireworks {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.opening-firework {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  color: #fbbf24;
+  filter: drop-shadow(0 0 5px currentColor);
+}
+
+.opening-firework::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 9999px;
+  background: currentColor;
+  box-shadow: 0 0 18px 5px currentColor;
+  animation: opening-firework-core 3.4s ease-out infinite;
+  animation-delay: inherit;
+}
+
+.opening-firework i {
+  position: absolute;
+  left: 1px;
+  top: 1px;
+  width: 2px;
+  height: 30px;
+  border-radius: 9999px;
+  background: linear-gradient(to top, transparent, currentColor);
+  transform-origin: 50% 0;
+  opacity: 0;
+  animation: opening-firework-burst 3.4s ease-out infinite;
+  animation-delay: inherit;
+}
+
+.firework-one {
+  left: 13%;
+  top: 24%;
+  color: #fb923c;
+  animation-delay: 0s;
+}
+
+.firework-two {
+  right: 13%;
+  top: 19%;
+  color: #22d3ee;
+  animation-delay: -0.9s;
+}
+
+.firework-three {
+  left: 17%;
+  bottom: 18%;
+  color: #a855f7;
+  animation-delay: -1.8s;
+}
+
+.firework-four {
+  right: 16%;
+  bottom: 16%;
+  color: #fb7185;
+  animation-delay: -2.65s;
+}
+
+@keyframes opening-firework-burst {
+  0%, 16% {
+    opacity: 0;
+    transform: rotate(var(--spark-angle)) translateY(-3px) scaleY(0.05);
+  }
+  20% { opacity: 1; }
+  52% {
+    opacity: 0.84;
+    transform: rotate(var(--spark-angle)) translateY(-58px) scaleY(1);
+  }
+  76%, 100% {
+    opacity: 0;
+    transform: rotate(var(--spark-angle)) translateY(-82px) scaleY(0.42);
+  }
+}
+
+@keyframes opening-firework-core {
+  0%, 16% { opacity: 0; transform: scale(0.1); }
+  20% { opacity: 0.9; transform: scale(1); }
+  44%, 100% { opacity: 0; transform: scale(2.4); }
+}
+
+@media (max-width: 640px) {
+  .firework-one { left: 8%; top: 15%; }
+  .firework-two { right: 8%; top: 12%; }
+  .firework-three { left: 9%; bottom: 11%; }
+  .firework-four { right: 9%; bottom: 9%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .opening-firework,
+  .opening-firework::after,
+  .opening-firework i {
+    animation: none;
+  }
+
+  .opening-fireworks {
+    display: none;
+  }
+}
+
+.mushroom-letter {
+  background: linear-gradient(145deg, rgba(69, 10, 10, 0.96), rgba(20, 53, 35, 0.96) 70%, rgba(15, 23, 42, 0.98));
+  border-color: rgba(248, 113, 113, 0.72);
+  box-shadow: 0 10px 35px -5px rgba(0, 0, 0, 0.7), 0 0 32px rgba(220, 38, 38, 0.2);
+}
+
+.mushroom-letter .bg-gradient-to-r {
+  background: linear-gradient(90deg, #991b1b, #ef4444, #991b1b);
+  color: #fff7ed;
+  border-color: rgba(254, 202, 202, 0.8);
+}
+
+.mushroom-letter .text-amber-400,
+.mushroom-letter .text-amber-300 {
+  color: #86efac;
+}
+
+.mushroom-letter .bg-slate-900\/70 {
+  background: rgba(69, 10, 10, 0.58);
+  border-color: rgba(134, 239, 172, 0.28);
+}
+
+.mushroom-letter .text-amber-50\/95 {
+  color: #fff7ed;
+}
+
+.mushroom-letter .bg-gradient-to-r.from-amber-400 {
+  background: linear-gradient(90deg, #dc2626, #ef4444, #b91c1c);
+  color: #fff7ed;
+}
+
+/* Star 3: athletic styling for the brothers and the gym companion unlock. */
+.brothers-letter {
+  isolation: isolate;
+  background:
+    linear-gradient(145deg, rgba(34, 211, 238, 0.08), transparent 34%),
+    repeating-linear-gradient(125deg, transparent 0 34px, rgba(255, 255, 255, 0.025) 34px 36px),
+    linear-gradient(145deg, rgba(5, 18, 34, 0.98), rgba(8, 36, 48, 0.97) 58%, rgba(8, 24, 36, 0.98));
+  border-color: rgba(34, 211, 238, 0.62);
+  box-shadow:
+    0 18px 50px -14px rgba(0, 0, 0, 0.85),
+    0 0 28px rgba(34, 211, 238, 0.19),
+    inset 0 0 34px rgba(52, 211, 153, 0.06);
+}
+
+.brothers-letter > :not(.brother-sports-motif) {
+  position: relative;
+  z-index: 2;
+}
+
+.brothers-letter > .absolute:not(.brother-sports-motif) {
+  position: absolute;
+}
+
+.brothers-letter > .letter-unlock-badge {
+  background: linear-gradient(90deg, #0e7490, #22d3ee, #34d399, #22d3ee, #0e7490);
+  background-size: 220% 100%;
+  color: #042f2e;
+  border-color: rgba(207, 250, 254, 0.85);
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.42);
+  animation: brother-energy-flow 4s linear infinite;
+}
+
+.brothers-letter h2 {
+  text-shadow: 0 0 12px rgba(34, 211, 238, 0.58);
+}
+
+.brothers-letter .text-amber-400 {
+  color: #6ee7b7;
+}
+
+.brothers-letter .bg-slate-900\/70 {
+  background: linear-gradient(135deg, rgba(8, 27, 43, 0.88), rgba(10, 42, 48, 0.76));
+  border-color: rgba(45, 212, 191, 0.24);
+  box-shadow: inset 4px 0 0 rgba(34, 211, 238, 0.42);
+}
+
+.brothers-letter .bg-gradient-to-r.from-amber-400 {
+  background: linear-gradient(90deg, #22d3ee, #34d399, #a3e635);
+  color: #052e2b;
+}
+
+.brother-sports-motif {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.brother-dumbbell {
+  position: absolute;
+  width: 8rem;
+  height: 8rem;
+  color: rgba(103, 232, 249, 0.075);
+  filter: drop-shadow(0 0 16px rgba(34, 211, 238, 0.16));
+}
+
+.brother-dumbbell-one {
+  top: 9%;
+  right: -2.5rem;
+  transform: rotate(-28deg);
+}
+
+.brother-dumbbell-two {
+  bottom: 8%;
+  left: -2.8rem;
+  transform: rotate(32deg);
+}
+
+.brother-gym-line {
+  position: absolute;
+  width: 44%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(52, 211, 153, 0.23), transparent);
+}
+
+.brother-gym-line-one { top: 24%; left: -8%; transform: rotate(-28deg); }
+.brother-gym-line-two { bottom: 24%; right: -8%; transform: rotate(-28deg); }
+
+.brother-unlock-banner {
+  border: 1px solid rgba(103, 232, 249, 0.46);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(34, 211, 238, 0.24), transparent 48%),
+    linear-gradient(135deg, rgba(8, 47, 73, 0.94), rgba(6, 78, 59, 0.78));
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.25), inset 0 0 24px rgba(34, 211, 238, 0.07);
+}
+
+.brother-unlock-banner::before,
+.brother-unlock-banner::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 28%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #22d3ee);
+  opacity: 0.65;
+}
+
+.brother-unlock-banner::before { left: 0; }
+.brother-unlock-banner::after { right: 0; transform: rotate(180deg); }
+
+.brother-unlock-icon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  color: #cffafe;
+  border-radius: 9999px;
+  border: 1px solid rgba(165, 243, 252, 0.7);
+  background: linear-gradient(145deg, #0891b2, #047857);
+  box-shadow: 0 0 18px rgba(34, 211, 238, 0.46);
+  animation: brother-strength-pulse 2s ease-in-out infinite;
+}
+
+.brother-follow-chip {
+  color: #d9f99d;
+  background: rgba(2, 44, 34, 0.68);
+  border: 1px solid rgba(163, 230, 53, 0.28);
+  border-radius: 9999px;
+  padding: 0.35rem 0.75rem;
+}
+
+/* Star 4: a quiet celestial memorial for Gregorio and Victoria. */
+.parents-letter {
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 8% 16%, rgba(255, 255, 255, 0.8) 0 1px, transparent 2px),
+    radial-gradient(circle at 78% 12%, rgba(254, 240, 138, 0.8) 0 1px, transparent 2px),
+    radial-gradient(circle at 91% 45%, rgba(255, 255, 255, 0.65) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 18% 72%, rgba(254, 240, 138, 0.7) 0 1px, transparent 2px),
+    radial-gradient(circle at 66% 86%, rgba(255, 255, 255, 0.6) 0 1px, transparent 2px),
+    linear-gradient(155deg, rgba(6, 10, 28, 0.98), rgba(22, 24, 59, 0.97) 58%, rgba(43, 28, 56, 0.97));
+  border-color: rgba(254, 240, 138, 0.68);
+  box-shadow:
+    0 18px 55px -14px rgba(0, 0, 0, 0.9),
+    0 0 30px rgba(254, 240, 138, 0.2),
+    inset 0 0 45px rgba(255, 237, 213, 0.06);
+}
+
+.parents-letter::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.75) 0 1px, transparent 1.6px),
+    radial-gradient(circle, rgba(254, 240, 138, 0.7) 0 1px, transparent 1.7px);
+  background-position: 0 0, 22px 18px;
+  background-size: 52px 52px, 68px 68px;
+  opacity: 0.19;
+  pointer-events: none;
+}
+
+.parents-letter > * {
+  position: relative;
+  z-index: 1;
+}
+
+.parents-letter > .absolute {
+  position: absolute;
+}
+
+.parents-letter > .letter-unlock-badge {
+  background: linear-gradient(90deg, #a16207, #fef08a, #fff7ed, #fef08a, #a16207);
+  background-size: 220% 100%;
+  color: #422006;
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 22px rgba(254, 240, 138, 0.48);
+  animation: parent-starlight-flow 5s linear infinite;
+}
+
+.parents-letter h2 {
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.46), 0 0 25px rgba(254, 240, 138, 0.36);
+}
+
+.parents-letter .bg-slate-900\/70 {
+  background: linear-gradient(135deg, rgba(15, 23, 58, 0.84), rgba(43, 31, 62, 0.78));
+  border-color: rgba(254, 240, 138, 0.22);
+  box-shadow: inset 0 0 18px rgba(255, 255, 255, 0.035);
+}
+
+.parent-flight-banner {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.18), transparent 46%),
+    linear-gradient(180deg, rgba(120, 86, 28, 0.26), rgba(30, 28, 66, 0.9));
+}
+
+.parent-name-constellations {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  margin-bottom: 0.7rem;
+  color: #fff7ed;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.85), 0 0 16px rgba(254, 240, 138, 0.55);
+}
+
+.parent-name-constellations span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+  white-space: nowrap;
+}
+
+.parent-name-constellations i {
+  color: #fef08a;
+  font-style: normal;
+  animation: parent-star-twinkle 1.9s ease-in-out infinite;
+}
+
+.parent-name-constellations span:last-child i {
+  animation-delay: -0.9s;
+}
+
+.parent-name-constellations b {
+  color: #fde68a;
+  font-size: 1.2rem;
+  font-weight: 400;
+  text-shadow: 0 0 12px rgba(253, 230, 138, 0.8);
+}
+
+.parents-letter .bg-gradient-to-r.from-amber-400 {
+  background: linear-gradient(90deg, #d97706, #fef08a, #fff7ed);
+  color: #422006;
+}
+
+/* Star 5: Canadian maple styling shared by the collectible and its letter. */
+.canada-letter {
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 16% 8%, rgba(255, 255, 255, 0.11), transparent 30%),
+    radial-gradient(circle at 88% 72%, rgba(239, 68, 68, 0.2), transparent 38%),
+    linear-gradient(145deg, rgba(55, 8, 18, 0.98), rgba(93, 18, 30, 0.97) 56%, rgba(31, 10, 22, 0.98));
+  border-color: rgba(248, 113, 113, 0.7);
+  box-shadow:
+    0 18px 52px -14px rgba(0, 0, 0, 0.88),
+    0 0 30px rgba(239, 68, 68, 0.24),
+    inset 0 0 42px rgba(255, 247, 237, 0.045);
+}
+
+.canada-letter > :not(.canada-maple-motif) {
+  position: relative;
+  z-index: 2;
+}
+
+.canada-letter > .absolute:not(.canada-maple-motif) {
+  position: absolute;
+}
+
+.canada-letter > .letter-unlock-badge {
+  background: linear-gradient(90deg, #991b1b, #ef4444, #fff7ed, #ef4444, #991b1b);
+  background-size: 230% 100%;
+  color: #450a0a;
+  border-color: rgba(254, 226, 226, 0.9);
+  box-shadow: 0 0 22px rgba(248, 113, 113, 0.48);
+  animation: canada-banner-flow 4.8s linear infinite;
+}
+
+.canada-letter h2 {
+  text-shadow: 0 0 11px rgba(248, 113, 113, 0.7), 0 0 22px rgba(255, 247, 237, 0.22);
+}
+
+.canada-letter .text-amber-400 {
+  color: #fecaca;
+}
+
+.canada-letter .bg-slate-900\/70 {
+  background: linear-gradient(135deg, rgba(69, 10, 10, 0.72), rgba(55, 18, 31, 0.82));
+  border-color: rgba(254, 202, 202, 0.24);
+  box-shadow: inset 4px 0 0 rgba(248, 113, 113, 0.45);
+}
+
+.canada-letter .bg-gradient-to-r.from-amber-400 {
+  background: linear-gradient(90deg, #b91c1c, #ef4444, #fff7ed);
+  color: #450a0a;
+}
+
+.canada-maple-motif {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.canada-floating-leaf {
+  position: absolute;
+  color: rgba(248, 113, 113, 0.1);
+  opacity: 0.12;
+  filter: grayscale(0.25) drop-shadow(0 0 13px rgba(239, 68, 68, 0.3));
+  animation: canada-leaf-drift 6s ease-in-out infinite;
+}
+
+.canada-leaf-one { top: 8%; right: -1.5rem; font-size: 7rem; transform: rotate(18deg); }
+.canada-leaf-two { bottom: 7%; left: -1.7rem; font-size: 6rem; animation-delay: -2s; }
+.canada-leaf-three { top: 52%; right: 7%; font-size: 2.4rem; animation-delay: -4s; }
+
+.canada-unlock-banner {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(254, 202, 202, 0.5);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 247, 237, 0.14), transparent 42%),
+    linear-gradient(145deg, rgba(127, 29, 29, 0.88), rgba(69, 10, 10, 0.86));
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.26), inset 0 0 24px rgba(248, 113, 113, 0.08);
+}
+
+.canada-unlock-banner::before,
+.canada-unlock-banner::after {
+  content: '';
+  position: absolute;
+  top: 2rem;
+  width: 30%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 247, 237, 0.64));
+}
+
+.canada-unlock-banner::before { left: 0; }
+.canada-unlock-banner::after { right: 0; transform: rotate(180deg); }
+
+.canada-maple-emblem {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  font-size: 2.15rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(254, 226, 226, 0.75);
+  background: radial-gradient(circle, rgba(255, 247, 237, 0.95), rgba(254, 202, 202, 0.88));
+  box-shadow: 0 0 21px rgba(248, 113, 113, 0.5);
+  animation: canada-maple-pulse 2.4s ease-in-out infinite;
+}
+
+.canada-destination-chip {
+  color: #fef3c7;
+  background: rgba(69, 10, 10, 0.72);
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  border-radius: 9999px;
+  padding: 0.35rem 0.75rem;
+}
+
+@keyframes canada-banner-flow {
+  to { background-position: 230% 0; }
+}
+
+@keyframes canada-leaf-drift {
+  0%, 100% { translate: 0 -5px; rotate: -4deg; }
+  50% { translate: -10px 9px; rotate: 8deg; }
+}
+
+@keyframes canada-maple-pulse {
+  0%, 100% { transform: scale(1) rotate(-4deg); box-shadow: 0 0 16px rgba(248, 113, 113, 0.4); }
+  50% { transform: scale(1.08) rotate(4deg); box-shadow: 0 0 28px rgba(254, 202, 202, 0.62); }
+}
+
+@keyframes parent-starlight-flow {
+  to { background-position: 220% 0; }
+}
+
+@keyframes parent-star-twinkle {
+  0%, 100% { opacity: 0.4; transform: scale(0.75); }
+  50% { opacity: 1; transform: scale(1.18); }
+}
+
+@keyframes brother-energy-flow {
+  to { background-position: 220% 0; }
+}
+
+@keyframes brother-strength-pulse {
+  0%, 100% { transform: scale(1) rotate(-4deg); box-shadow: 0 0 14px rgba(34, 211, 238, 0.34); }
+  50% { transform: scale(1.08) rotate(4deg); box-shadow: 0 0 24px rgba(52, 211, 153, 0.55); }
+}
+
+/* Star 2: the letter inherits the Super DJ's rotating prismatic aura. */
+.evolution-letter {
+  isolation: isolate;
+  border: 2px solid transparent;
+  background:
+    radial-gradient(circle at 12% 12%, rgba(56, 189, 248, 0.18), transparent 34%),
+    radial-gradient(circle at 88% 28%, rgba(217, 70, 239, 0.17), transparent 36%),
+    radial-gradient(circle at 52% 100%, rgba(250, 204, 21, 0.14), transparent 42%),
+    linear-gradient(145deg, rgba(8, 13, 32, 0.97), rgba(23, 14, 47, 0.96) 54%, rgba(5, 28, 43, 0.97)) padding-box,
+    conic-gradient(from var(--dj-aura-angle), #facc15, #38bdf8, #d946ef, #34d399, #facc15) border-box;
+  box-shadow:
+    0 18px 55px -16px rgba(0, 0, 0, 0.9),
+    0 0 22px rgba(56, 189, 248, 0.3),
+    0 0 42px rgba(217, 70, 239, 0.2);
+  animation: dj-aura-border 5s linear infinite;
+}
+
+.evolution-letter::before {
+  content: '';
+  position: absolute;
+  inset: -11px;
+  z-index: -1;
+  border-radius: 2rem;
+  background: conic-gradient(from var(--dj-aura-angle), #facc15, #38bdf8, #d946ef, #34d399, #facc15);
+  filter: blur(17px);
+  opacity: 0.34;
+  animation: dj-aura-border 5s linear infinite, dj-aura-breathe 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.evolution-letter::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: linear-gradient(115deg, transparent 24%, rgba(255, 255, 255, 0.07) 43%, transparent 61%);
+  background-size: 220% 100%;
+  animation: dj-magic-shimmer 4.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.evolution-letter > :not(.dj-magic-aura) {
+  position: relative;
+  z-index: 2;
+}
+
+.evolution-letter > .absolute:not(.dj-magic-aura) {
+  position: absolute;
+}
+
+.evolution-letter > .letter-unlock-badge {
+  background: linear-gradient(90deg, #facc15, #38bdf8, #d946ef, #34d399, #facc15);
+  background-size: 240% 100%;
+  animation: dj-rainbow-slide 4s linear infinite;
+  border-color: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.45), 0 0 28px rgba(217, 70, 239, 0.25);
+}
+
+.evolution-letter h2 {
+  text-shadow: 0 0 11px rgba(56, 189, 248, 0.7), 0 0 22px rgba(217, 70, 239, 0.42);
+}
+
+.evolution-letter .bg-slate-900\/70 {
+  background: linear-gradient(135deg, rgba(8, 15, 38, 0.84), rgba(32, 15, 54, 0.78));
+  border-color: rgba(125, 211, 252, 0.25);
+  box-shadow: inset 0 0 18px rgba(56, 189, 248, 0.05), 0 0 16px rgba(217, 70, 239, 0.08);
+}
+
+.evolution-letter .bg-slate-900\/70:nth-child(3n + 2) {
+  border-color: rgba(232, 121, 249, 0.26);
+}
+
+.evolution-letter .bg-gradient-to-r.from-amber-400 {
+  background: linear-gradient(90deg, #facc15, #38bdf8, #d946ef, #facc15);
+  background-size: 220% 100%;
+  color: #080d20;
+}
+
+.dj-magic-aura {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.dj-magic-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 112%;
+  height: 48%;
+  border: 2px solid rgba(56, 189, 248, 0.38);
+  border-radius: 50%;
+  box-shadow: 0 0 11px currentColor, inset 0 0 11px currentColor;
+  mix-blend-mode: screen;
+}
+
+.dj-magic-ring-one {
+  color: #38bdf8;
+  animation: dj-ring-one 8s linear infinite;
+}
+
+.dj-magic-ring-two {
+  width: 108%;
+  height: 58%;
+  color: #d946ef;
+  border-color: rgba(217, 70, 239, 0.32);
+  animation: dj-ring-two 10s linear infinite;
+}
+
+.dj-magic-star {
+  position: absolute;
+  color: white;
+  font-size: 1rem;
+  line-height: 1;
+  text-shadow: 0 0 7px currentColor, 0 0 14px currentColor;
+  animation: dj-star-twinkle 1.8s ease-in-out infinite;
+}
+
+.dj-magic-star-one { left: 5%; top: 17%; color: #fde047; }
+.dj-magic-star-two { right: 7%; top: 32%; color: #7dd3fc; animation-delay: -0.6s; }
+.dj-magic-star-three { left: 8%; bottom: 22%; color: #e879f9; animation-delay: -1.1s; }
+.dj-magic-star-four { right: 10%; bottom: 10%; color: #6ee7b7; animation-delay: -1.45s; }
+
+@property --dj-aura-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes dj-aura-border {
+  to { --dj-aura-angle: 360deg; }
+}
+
+@keyframes dj-aura-breathe {
+  0%, 100% { opacity: 0.25; transform: scale(0.985); }
+  50% { opacity: 0.46; transform: scale(1.015); }
+}
+
+@keyframes dj-magic-shimmer {
+  0%, 22% { background-position: 180% 0; }
+  72%, 100% { background-position: -80% 0; }
+}
+
+@keyframes dj-rainbow-slide {
+  to { background-position: 240% 0; }
+}
+
+@keyframes dj-ring-one {
+  from { transform: translate(-50%, -50%) rotate(-8deg) scale(0.98); filter: hue-rotate(0deg); }
+  50% { transform: translate(-50%, -50%) rotate(8deg) scale(1.04); }
+  to { transform: translate(-50%, -50%) rotate(-8deg) scale(0.98); filter: hue-rotate(360deg); }
+}
+
+@keyframes dj-ring-two {
+  from { transform: translate(-50%, -50%) rotate(82deg) scale(1.02); filter: hue-rotate(0deg); }
+  50% { transform: translate(-50%, -50%) rotate(98deg) scale(0.96); }
+  to { transform: translate(-50%, -50%) rotate(82deg) scale(1.02); filter: hue-rotate(-360deg); }
+}
+
+@keyframes dj-star-twinkle {
+  0%, 100% { opacity: 0.28; transform: scale(0.65) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.25) rotate(90deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .evolution-letter,
+  .evolution-letter::before,
+  .evolution-letter::after,
+  .evolution-letter > .letter-unlock-badge,
+  .dj-magic-ring,
+  .dj-magic-star,
+  .brothers-letter > .letter-unlock-badge,
+  .brother-unlock-icon,
+  .parents-letter > .letter-unlock-badge,
+  .parent-name-constellations i,
+  .canada-letter > .letter-unlock-badge,
+  .canada-floating-leaf,
+  .canada-maple-emblem {
+    animation: none;
+  }
+}
+
 .neon-glow-gold {
   box-shadow: 0 0 25px rgba(250, 204, 21, 0.45);
 }
@@ -79,6 +1190,68 @@
 .animate-eq-3 { animation: eqBar3 0.85s ease-in-out infinite; }
 .animate-eq-4 { animation: eqBar4 0.65s ease-in-out infinite; }
 
+/* Optional vinyl quest: visible, but quieter than the five story collectibles. */
+.music-disc-counter,
+.michelle-unlock-pill {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  border-radius: 999px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.music-disc-counter {
+  padding: 0.28rem 0.62rem;
+  color: #cbd5e1;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(96, 165, 250, 0.28);
+  box-shadow: 0 7px 20px rgba(2, 6, 23, 0.28);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.music-disc-counter svg {
+  color: #60a5fa;
+  filter: drop-shadow(0 0 5px rgba(96, 165, 250, 0.7));
+}
+
+.music-disc-counter.is-complete {
+  color: #fce7f3;
+  border-color: rgba(244, 114, 182, 0.58);
+  background: linear-gradient(90deg, rgba(88, 28, 135, 0.78), rgba(190, 24, 93, 0.65));
+}
+
+.music-disc-counter.is-complete svg {
+  color: #f9a8d4;
+}
+
+.michelle-unlock-pill {
+  padding: 0.28rem 0.68rem;
+  color: #fff1f2;
+  background: linear-gradient(90deg, rgba(88, 28, 135, 0.88), rgba(225, 29, 72, 0.78));
+  border: 1px solid rgba(251, 207, 232, 0.7);
+  box-shadow: 0 0 18px rgba(244, 114, 182, 0.42);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  animation: michelle-unlock-glow 1.8s ease-in-out infinite;
+}
+
+@keyframes michelle-unlock-glow {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 14px rgba(244, 114, 182, 0.35); }
+  50% { transform: scale(1.025); box-shadow: 0 0 24px rgba(244, 114, 182, 0.65); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .michelle-unlock-pill { animation: none; }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -91,4 +1264,3 @@
   background: rgba(250, 204, 21, 0.5);
   border-radius: 9999px;
 }
-

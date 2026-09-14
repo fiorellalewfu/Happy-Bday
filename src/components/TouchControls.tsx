@@ -18,7 +18,7 @@ export const TouchControls: React.FC<TouchControlsProps> = ({ onControlChange, c
   };
 
   return (
-    <div className="absolute inset-x-0 bottom-4 pointer-events-none z-30 px-4 flex items-end justify-between select-none">
+    <div className="touch-controls-shell absolute inset-x-0 bottom-4 pointer-events-none z-30 px-4 flex items-end justify-between select-none">
       {/* Directional Pad (Left & Right) */}
       <div className="pointer-events-auto flex items-center gap-3">
         <button

@@ -1,0 +1,9 @@
+{
+  "name": "JONAMS: Un Viaje de Ritmo y Luz",
+  "short_name": "JONAMS",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#1e082d",
+  "theme_color": "#301037"
+}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Volume2, VolumeX, Play, Pause, Disc3, Headphones } from 'lucide-react';
+import { ArrowLeft, Volume2, VolumeX, Play, Pause, Disc3, Headphones } from 'lucide-react';
 import { EasterEgg } from '../types';
 import {
   JONAMS_TRACK_META,
@@ -11,8 +11,12 @@ import {
 interface GameHUDProps {
   starsCount: number;
   totalStars: number;
+  discCount: number;
+  totalDiscs: number;
+  michelleUnlocked?: boolean;
   isMuted: boolean;
   onToggleSound: () => void;
+  onBackToMenu: () => void;
   easterEggs: EasterEgg[];
   recentEggNotification: EasterEgg | null;
   isSuperDJ?: boolean;
@@ -22,8 +26,12 @@ interface GameHUDProps {
 export const GameHUD: React.FC<GameHUDProps> = ({
   starsCount,
   totalStars,
+  discCount,
+  totalDiscs,
+  michelleUnlocked,
   isMuted,
   onToggleSound,
+  onBackToMenu,
   easterEggs,
   recentEggNotification,
   isSuperDJ,
@@ -128,6 +136,17 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             ))}
           </div>
 
+          <button
+            id="btn-back-to-menu"
+            onClick={onBackToMenu}
+            aria-label="Volver al menú principal"
+            title="Volver al menú principal"
+            className="game-back-button h-9 md:h-10 px-2.5 md:px-3 bg-slate-900/85 hover:bg-slate-800 backdrop-blur-md rounded-2xl border border-orange-400/35 text-white flex items-center justify-center gap-1.5 shadow-lg active:scale-95 transition-all cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4 text-orange-300" />
+            <span className="hidden md:inline text-[10px] font-bold uppercase tracking-wider">Atrás</span>
+          </button>
+
           {/* Sound Toggle */}
           <button
             id="btn-toggle-sound"
@@ -142,6 +161,23 @@ export const GameHUD: React.FC<GameHUDProps> = ({
             )}
           </button>
         </div>
+      </div>
+
+      {/* Optional vinyl collection — intentionally quieter than the story counter. */}
+      <div className="flex items-center gap-2 self-start -mt-0.5">
+        <div className={`music-disc-counter ${discCount === totalDiscs ? 'is-complete' : ''}`}>
+          <Disc3 className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Discos</span>
+          <strong>{discCount}/{totalDiscs}</strong>
+        </div>
+
+        {michelleUnlocked && (
+          <div className="michelle-unlock-pill" role="status">
+            <span aria-hidden="true">💖</span>
+            <span>Michelle desbloqueada</span>
+            <span aria-hidden="true">💋</span>
+          </div>
+        )}
       </div>
 
       {/* Easter Egg Discovery Toast Notification */}

@@ -3,9 +3,9 @@ import { LetterChapter, EasterEgg } from '../types';
 export const LETTER_CHAPTERS: LetterChapter[] = [
   {
     id: 1,
-    title: "Estrella 1 — El Comienzo",
+    title: "Hongo 1 — El Comienzo",
     subtitle: "Un momento para detener el tiempo",
-    icon: "⭐",
+    icon: "🍄",
     text: [
       "Querido Jonathan:",
       "Hoy estoy muy contenta de tener la oportunidad de escribirte y de poder poner en palabras tantas emociones, recuerdos y sentimientos que aparecen cuando pienso en ti."
@@ -25,9 +25,9 @@ export const LETTER_CHAPTERS: LetterChapter[] = [
   },
   {
     id: 3,
-    title: "Estrella 3 — Los Hermanos",
+    title: "Mancuerna 3 — Los Hermanos",
     subtitle: "El amor incondicional de nuestra familia",
-    icon: "🤝",
+    icon: "🏋️",
     text: [
       "También me hace feliz saber que estás cerca de nuestros hermanos, que se tienen los unos a los otros, que se cuidan y siguen alimentando ese amor tan especial de esta familia loca que tenemos.",
       "Yo te pienso mucho y te extraño muchísimo."
@@ -35,20 +35,20 @@ export const LETTER_CHAPTERS: LetterChapter[] = [
   },
   {
     id: 4,
-    title: "Estrella 4 — El Leoncito y Nuestros Papás",
-    subtitle: "Dos luces eternas alumbrando tus pasos",
-    icon: "✨",
+    title: "Corazón 4 — Nuestros Papás",
+    subtitle: "Gregorio y Victoria, dos luces eternas alumbrando tus pasos",
+    icon: "❤️",
     specialEffect: 'celestial-flight',
     text: [
       "A veces recuerdo cuando eras pequeño y siento que disfruté tanto esa etapa tuya.",
       "Para mí siempre vas a tener algo de ese leoncito de la familia, lleno de energía, personalidad y vida.",
-      "Y también siento que mamá y papá siguen de alguna manera cerquita de ti, como dos angelitos acompañando tus pasos, cuidándote y alumbrándote el camino.",
+      "Y también siento que Gregorio y Victoria, mamá y papá, siguen de alguna manera cerquita de ti, como dos angelitos acompañando tus pasos, cuidándote y alumbrándote el camino.",
       "Me imagino que, si pudieran verte hoy y ver en el hombre en el que te has convertido, estarían tan orgullosos de ti como lo estoy yo."
     ]
   },
   {
     id: 5,
-    title: "Estrella 5 — El Futuro",
+    title: "Hoja de Maple 5 — El Futuro",
     subtitle: "Construyendo tu propia felicidad",
     icon: "🍁",
     specialEffect: 'leaves-canada',

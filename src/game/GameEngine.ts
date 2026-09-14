@@ -15,6 +15,8 @@ export interface GameEngineCallbacks {
   onEasterEggFound: (egg: EasterEgg) => void;
   onReachGoal: () => void;
   onStarCountUpdate: (count: number) => void;
+  onDiscCountUpdate?: (count: number) => void;
+  onMichelleUnlocked?: () => void;
   onEvolution?: () => void;
   onFlightUnlocked?: () => void;
 }
@@ -74,12 +76,43 @@ export class RetroPlatformerEngine {
   private playerHead!: THREE.Group;
   private headphoneCups: THREE.Mesh[] = [];
 
+  // Gym brother companion (unlocked at Star 3)
+  private brotherGroup!: THREE.Group;
+  private brotherShadow!: THREE.Mesh;
+  private brotherLeftLeg!: THREE.Mesh;
+  private brotherRightLeg!: THREE.Mesh;
+  private brotherLeftArm!: THREE.Mesh;
+  private brotherRightArm!: THREE.Mesh;
+  private brotherHead!: THREE.Group;
+  private brotherFinalShades!: THREE.Mesh;
+  private brotherUnlocked = false;
+  private brotherPos = { x: 0, y: 3 };
+
   // Platforms
   private platforms: { x: number; y: number; width: number; height: number; mesh: THREE.Object3D }[] = [];
 
   // Stars
   private stars: { index: number; mesh: THREE.Group; collected: boolean; x: number; y: number; rings: THREE.Mesh[]; chapter: LetterChapter }[] = [];
   private collectedStarsCount = 0;
+
+  // Secondary colored vinyl collectibles
+  private musicDiscs: { index: number; mesh: THREE.Group; ring: THREE.Mesh; collected: boolean; x: number; y: number }[] = [];
+  private collectedDiscCount = 0;
+
+  // Optional romantic reward unlocked by collecting all 11 discs
+  private michelleGroup!: THREE.Group;
+  private michelleHeart!: THREE.Mesh;
+  private michelleHeartGlow!: THREE.Mesh;
+  private michelleAvatarGroup!: THREE.Group;
+  private michelleHeadGroup!: THREE.Group;
+  private michelleLeftArm!: THREE.Mesh;
+  private michelleRightArm!: THREE.Mesh;
+  private michelleLeftWing!: THREE.Group;
+  private michelleRightWing!: THREE.Group;
+  private michelleHalo!: THREE.Mesh;
+  private michelleFinalShades!: THREE.Mesh;
+  private michelleKiss!: THREE.Group;
+  private michelleUnlocked = false;
 
   // Easter Eggs
   private easterEggs: { data: EasterEgg; mesh: THREE.Group; found: boolean }[] = [];
@@ -96,6 +129,10 @@ export class RetroPlatformerEngine {
   private parentHaloRingsA: THREE.Mesh[] = [];
   private parentHaloRingsB: THREE.Mesh[] = [];
   private parentOrbitingSparks: { mesh: THREE.Mesh; parentGroup: THREE.Group; angle: number; speed: number; radius: number; heightOffset: number }[] = [];
+  private parentConstellationsGroup!: THREE.Group;
+  private constellationStars: { mesh: THREE.Mesh; phase: number }[] = [];
+  private constellationLineMaterials: THREE.LineBasicMaterial[] = [];
+  private constellationReveal = 0;
 
   // Laser beams & concert spotlights
   private lasers: { mesh: THREE.Mesh; baseRotZ: number; speed: number; phase: number }[] = [];
@@ -151,9 +188,12 @@ export class RetroPlatformerEngine {
     this.playerGroup = new THREE.Group();
     this.playerShadow = this.createShadowMesh();
     this.buildDJPlayer();
+    this.buildGymBrother();
     this.setupTrailParticles();
     this.buildLevel(chapters, easterEggsList);
+    this.buildMichelleReward();
     this.buildCelestialParents();
+    this.buildParentConstellations();
     this.buildBackgroundScenery();
 
     // Listeners
@@ -521,6 +561,139 @@ export class RetroPlatformerEngine {
     this.scene.add(this.playerGroup);
   }
 
+  private buildGymBrother() {
+    this.brotherGroup = new THREE.Group();
+    this.brotherGroup.visible = false;
+
+    const skinMat = new THREE.MeshLambertMaterial({ color: 0xd99a61 });
+    const tankMat = new THREE.MeshStandardMaterial({
+      color: 0x2563eb,
+      roughness: 0.45,
+      metalness: 0.08
+    });
+    const shortsMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.65 });
+    const hairMat = new THREE.MeshLambertMaterial({ color: 0x171717 });
+    const shoeMat = new THREE.MeshLambertMaterial({ color: 0xf8fafc });
+    const metalMat = new THREE.MeshStandardMaterial({
+      color: 0x94a3b8,
+      metalness: 0.9,
+      roughness: 0.18
+    });
+    const weightMat = new THREE.MeshStandardMaterial({
+      color: 0x0f172a,
+      metalness: 0.65,
+      roughness: 0.28
+    });
+
+    // Athletic tank top and a slightly broader upper body.
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.95, 0.54), tankMat);
+    torso.position.y = 1.02;
+    torso.castShadow = true;
+    this.brotherGroup.add(torso);
+
+    const tankStripe = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 0.9, 0.56),
+      new THREE.MeshStandardMaterial({
+        color: 0x22d3ee,
+        emissive: 0x0891b2,
+        emissiveIntensity: 0.28
+      })
+    );
+    tankStripe.position.set(0, 1.02, 0.01);
+    this.brotherGroup.add(tankStripe);
+
+    this.brotherHead = new THREE.Group();
+    this.brotherHead.position.set(0, 1.76, 0);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.72, 0.72), skinMat);
+    head.castShadow = true;
+    this.brotherHead.add(head);
+
+    const hair = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.27, 0.76), hairMat);
+    hair.position.y = 0.29;
+    this.brotherHead.add(hair);
+
+    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.08), hairMat);
+    brow.position.set(0, 0.08, 0.37);
+    this.brotherHead.add(brow);
+
+    this.brotherFinalShades = new THREE.Mesh(
+      new THREE.BoxGeometry(0.62, 0.18, 0.1),
+      new THREE.MeshStandardMaterial({
+        color: 0x09090b,
+        emissive: 0x0891b2,
+        emissiveIntensity: 0.22,
+        metalness: 0.92,
+        roughness: 0.08
+      })
+    );
+    this.brotherFinalShades.position.set(0, 0.07, 0.4);
+    this.brotherFinalShades.visible = false;
+    this.brotherHead.add(this.brotherFinalShades);
+    this.brotherGroup.add(this.brotherHead);
+
+    const legGeo = new THREE.BoxGeometry(0.3, 0.62, 0.34);
+    this.brotherLeftLeg = new THREE.Mesh(legGeo, shortsMat);
+    this.brotherLeftLeg.position.set(-0.22, 0.39, 0);
+    this.brotherRightLeg = new THREE.Mesh(legGeo, shortsMat);
+    this.brotherRightLeg.position.set(0.22, 0.39, 0);
+
+    const shoeGeo = new THREE.BoxGeometry(0.34, 0.2, 0.5);
+    const shoeL = new THREE.Mesh(shoeGeo, shoeMat);
+    shoeL.position.set(0, -0.27, 0.08);
+    const shoeR = new THREE.Mesh(shoeGeo, shoeMat);
+    shoeR.position.set(0, -0.27, 0.08);
+    this.brotherLeftLeg.add(shoeL);
+    this.brotherRightLeg.add(shoeR);
+    this.brotherGroup.add(this.brotherLeftLeg, this.brotherRightLeg);
+
+    // Bare athletic arms, each carrying a gym dumbbell.
+    const armGeo = new THREE.BoxGeometry(0.25, 0.68, 0.25);
+    this.brotherLeftArm = new THREE.Mesh(armGeo, skinMat);
+    this.brotherLeftArm.position.set(-0.56, 1.03, 0);
+    this.brotherRightArm = new THREE.Mesh(armGeo, skinMat);
+    this.brotherRightArm.position.set(0.56, 1.03, 0);
+
+    const dumbbellBarGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.48, 10);
+    const weightGeo = new THREE.CylinderGeometry(0.16, 0.16, 0.12, 12);
+    const createBrotherDumbbell = () => {
+      const dumbbell = new THREE.Group();
+      dumbbell.position.set(0, -0.45, 0.05);
+      const bar = new THREE.Mesh(dumbbellBarGeo, metalMat);
+      bar.rotation.z = Math.PI / 2;
+      const weightA = new THREE.Mesh(weightGeo, weightMat);
+      weightA.rotation.z = Math.PI / 2;
+      weightA.position.x = -0.24;
+      const weightB = new THREE.Mesh(weightGeo, weightMat);
+      weightB.rotation.z = Math.PI / 2;
+      weightB.position.x = 0.24;
+      dumbbell.add(bar, weightA, weightB);
+      return dumbbell;
+    };
+
+    this.brotherLeftArm.add(createBrotherDumbbell());
+    this.brotherRightArm.add(createBrotherDumbbell());
+    this.brotherGroup.add(this.brotherLeftArm, this.brotherRightArm);
+
+    // Smaller than Jonathan, but still easy to recognize beside him.
+    this.brotherGroup.scale.setScalar(0.76);
+    this.brotherGroup.position.set(this.playerPos.x - 1.35, this.playerPos.y, 0.55);
+    this.scene.add(this.brotherGroup);
+
+    const shadowGeo = new THREE.CircleGeometry(0.48, 16);
+    shadowGeo.rotateX(-Math.PI / 2);
+    this.brotherShadow = new THREE.Mesh(
+      shadowGeo,
+      new THREE.MeshBasicMaterial({
+        color: 0x020617,
+        transparent: true,
+        opacity: 0.34,
+        depthWrite: false
+      })
+    );
+    this.brotherShadow.visible = false;
+    this.scene.add(this.brotherShadow);
+  }
+
   private buildLevel(chapters: LetterChapter[], easterEggsList: EasterEgg[]) {
     // Sophisticated Club / Festival Materials:
     // Polished teak club deck, obsidian slate, glowing LED track trim, subwoofer speaker blocks
@@ -650,7 +823,7 @@ export class RetroPlatformerEngine {
     // Easter Egg 2: Matte Hex Gym Dumbbells & Kettlebell at X = 64
     this.createEasterEggMesh(easterEggsList[1], 64, 7.4);
 
-    // Star 3 at (82, 7.8)
+    // Magical dumbbell collectible for Chapter 3 at (82, 7.8)
     this.createStarMesh(3, chapters[2], 82, 7.8);
 
     // Section 4: The Lion's Ascent & Celestial Peak (Mom & Dad's Lights)
@@ -662,7 +835,7 @@ export class RetroPlatformerEngine {
     // Easter Egg 3: The Golden Lion Statue at X = 99
     this.createEasterEggMesh(easterEggsList[2], 99, 9.2);
 
-    // Star 4 at (116, 12.8) - High glowing celestial plateau
+    // Celestial heart collectible for Chapter 4 at (116, 12.8)
     this.createStarMesh(4, chapters[3], 116, 12.8);
 
     // Section 5: The Canadian Maple Way & Mainstage (Chapter 5 & Canada Egg)
@@ -674,14 +847,314 @@ export class RetroPlatformerEngine {
     // Easter Egg 4: Canadian Maple Leaf Neon at X = 134
     this.createEasterEggMesh(easterEggsList[3], 134, 10.2);
 
-    // Star 5 at (146, 10.2)
+    // Magical Canadian maple leaf collectible for Chapter 5 at (146, 10.2)
     this.createStarMesh(5, chapters[4], 146, 10.2);
+
+    // 11 optional vinyl records: a lighter secondary collection path.
+    // The final three float above the platforms and require the celestial flight power.
+    const discRoute = [
+      { x: 5, y: 1.2 },
+      { x: 18, y: 3.2 },
+      { x: 25, y: 3.8 },
+      { x: 32, y: 5.1 },
+      { x: 43, y: 5.9 },
+      { x: 58, y: 6.2 },
+      { x: 73, y: 6.4 },
+      { x: 101, y: 9.3 },
+      { x: 109, y: 16.4 },
+      { x: 124, y: 18.2 },
+      { x: 140, y: 15.8 }
+    ];
+    const discColors = [
+      0xfb7185, 0xfb923c, 0xfacc15, 0xa3e635, 0x34d399, 0x22d3ee,
+      0x3b82f6, 0x8b5cf6, 0xd946ef, 0xf43f5e, 0x60a5fa
+    ];
+    discRoute.forEach((disc, discIndex) => {
+      this.createMusicDisc(discIndex + 1, disc.x, disc.y, discColors[discIndex]);
+    });
 
     // Final JONAMS Festival Mainstage
     this.buildMainstageArch(158, 9.5);
 
     // Starting LED Signboard
     this.buildLEDSignboard(0, 0);
+  }
+
+  private createMusicDisc(index: number, x: number, y: number, color: number) {
+    const group = new THREE.Group();
+
+    const vinyl = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.44, 0.44, 0.09, 28),
+      new THREE.MeshStandardMaterial({
+        color,
+        emissive: color,
+        emissiveIntensity: 0.42,
+        metalness: 0.68,
+        roughness: 0.2
+      })
+    );
+    vinyl.rotation.x = Math.PI / 2;
+
+    const label = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.22, 0.22, 0.105, 24),
+      new THREE.MeshStandardMaterial({ color: 0x111827, metalness: 0.45, roughness: 0.35 })
+    );
+    label.rotation.x = Math.PI / 2;
+
+    const center = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.055, 0.055, 0.12, 16),
+      new THREE.MeshBasicMaterial({ color: 0xffffff })
+    );
+    center.rotation.x = Math.PI / 2;
+
+    const grooveMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.28,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const grooveA = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.008, 5, 28), grooveMaterial);
+    grooveA.position.z = 0.075;
+    const grooveB = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.007, 5, 28), grooveMaterial);
+    grooveB.position.z = 0.076;
+
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(0.62, 0.022, 6, 32),
+      new THREE.MeshBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0.44,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      })
+    );
+
+    group.add(vinyl, label, center, grooveA, grooveB, ring);
+    group.position.set(x, y, 0.2);
+    group.add(new THREE.PointLight(color, 0.8, 4));
+    this.scene.add(group);
+    this.musicDiscs.push({ index, mesh: group, ring, collected: false, x, y });
+  }
+
+  private buildMichelleReward() {
+    this.michelleGroup = new THREE.Group();
+    this.michelleGroup.position.set(151, 8.15, 0.45);
+    this.michelleGroup.visible = false;
+
+    const heartShape = new THREE.Shape();
+    heartShape.moveTo(0, -0.85);
+    heartShape.bezierCurveTo(-0.18, -0.58, -0.98, -0.06, -0.98, 0.5);
+    heartShape.bezierCurveTo(-0.98, 1.12, -0.22, 1.28, 0, 0.7);
+    heartShape.bezierCurveTo(0.22, 1.28, 0.98, 1.12, 0.98, 0.5);
+    heartShape.bezierCurveTo(0.98, -0.06, 0.18, -0.58, 0, -0.85);
+    heartShape.closePath();
+    const heartGeometry = new THREE.ExtrudeGeometry(heartShape, {
+      depth: 0.22,
+      bevelEnabled: true,
+      bevelSegments: 3,
+      bevelSize: 0.07,
+      bevelThickness: 0.07
+    });
+    heartGeometry.center();
+
+    this.michelleHeartGlow = new THREE.Mesh(
+      heartGeometry,
+      new THREE.MeshBasicMaterial({
+        color: 0xf9a8d4,
+        transparent: true,
+        opacity: 0.25,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      })
+    );
+    this.michelleHeartGlow.position.set(0, 1.25, -0.55);
+    this.michelleHeartGlow.scale.setScalar(1.82);
+
+    this.michelleHeart = new THREE.Mesh(
+      heartGeometry,
+      new THREE.MeshStandardMaterial({
+        color: 0xfb7185,
+        emissive: 0xec4899,
+        emissiveIntensity: 0.82,
+        metalness: 0.5,
+        roughness: 0.16
+      })
+    );
+    this.michelleHeart.position.set(0, 1.25, -0.5);
+    this.michelleHeart.scale.setScalar(1.58);
+    this.michelleGroup.add(this.michelleHeartGlow, this.michelleHeart);
+
+    const skinMaterial = new THREE.MeshStandardMaterial({
+      color: 0xf4c9a8,
+      roughness: 0.62
+    });
+    const blondeMaterial = new THREE.MeshStandardMaterial({
+      color: 0xfde68a,
+      emissive: 0xd97706,
+      emissiveIntensity: 0.18,
+      metalness: 0.08,
+      roughness: 0.38
+    });
+    const dressMaterial = new THREE.MeshStandardMaterial({
+      color: 0xf9a8d4,
+      emissive: 0xdb2777,
+      emissiveIntensity: 0.24,
+      metalness: 0.12,
+      roughness: 0.34
+    });
+    const wingMaterial = new THREE.MeshStandardMaterial({
+      color: 0xfffbeb,
+      emissive: 0xfef3c7,
+      emissiveIntensity: 0.72,
+      transparent: true,
+      opacity: 0.94,
+      roughness: 0.28
+    });
+
+    this.michelleAvatarGroup = new THREE.Group();
+    this.michelleAvatarGroup.position.z = 0.08;
+
+    // Geometric feather fans keep the same blocky language as Jonathan's wings.
+    const createAngelWing = (side: -1 | 1) => {
+      const wing = new THREE.Group();
+      wing.position.set(side * 0.38, 1.32, -0.2);
+      [0.74, 0.62, 0.5].forEach((length, featherIndex) => {
+        const featherGeometry = new THREE.ConeGeometry(0.14 - featherIndex * 0.018, length, 4);
+        featherGeometry.rotateZ(side * (0.58 + featherIndex * 0.19));
+        const feather = new THREE.Mesh(featherGeometry, wingMaterial);
+        feather.position.set(side * (0.22 + featherIndex * 0.14), -featherIndex * 0.11, 0);
+        wing.add(feather);
+      });
+      return wing;
+    };
+    this.michelleLeftWing = createAngelWing(-1);
+    this.michelleRightWing = createAngelWing(1);
+
+    // Long blonde hair, rebuilt with the same squared shapes as the other avatars.
+    const hairBack = new THREE.Mesh(new THREE.BoxGeometry(0.82, 1.28, 0.24), blondeMaterial);
+    hairBack.position.set(0, 1.43, -0.28);
+    const hairLeft = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.05, 0.27), blondeMaterial);
+    hairLeft.position.set(-0.4, 1.3, 0.01);
+    const hairRight = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.05, 0.27), blondeMaterial);
+    hairRight.position.set(0.4, 1.3, 0.01);
+
+    this.michelleHeadGroup = new THREE.Group();
+    this.michelleHeadGroup.position.set(0, 1.78, 0.05);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.76, 0.72), skinMaterial);
+    const hairTop = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.32, 0.78), blondeMaterial);
+    hairTop.position.set(0, 0.31, -0.02);
+    const fringeLeft = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.28, 0.08), blondeMaterial);
+    fringeLeft.position.set(-0.2, 0.19, 0.38);
+    fringeLeft.rotation.z = -0.16;
+    const fringeRight = fringeLeft.clone();
+    fringeRight.position.x = 0.2;
+    fringeRight.rotation.z = 0.16;
+
+    // Minimal face, just like requested: no eyes, only her red lips.
+    this.michelleKiss = new THREE.Group();
+    this.michelleKiss.position.set(0.06, -0.13, 0.39);
+    const lipMaterial = new THREE.MeshBasicMaterial({ color: 0xe11d48 });
+    const upperLip = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.055, 0.06), lipMaterial);
+    upperLip.rotation.z = 0.14;
+    upperLip.position.x = -0.035;
+    const lowerLip = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.055, 0.06), lipMaterial);
+    lowerLip.rotation.z = -0.14;
+    lowerLip.position.x = 0.035;
+    this.michelleKiss.add(upperLip, lowerLip);
+    this.michelleFinalShades = new THREE.Mesh(
+      new THREE.BoxGeometry(0.66, 0.19, 0.1),
+      new THREE.MeshStandardMaterial({
+        color: 0x18181b,
+        emissive: 0xd946ef,
+        emissiveIntensity: 0.22,
+        metalness: 0.92,
+        roughness: 0.08
+      })
+    );
+    this.michelleFinalShades.position.set(0, 0.075, 0.39);
+    this.michelleFinalShades.visible = false;
+    this.michelleHeadGroup.add(
+      head, hairTop, fringeLeft, fringeRight, this.michelleKiss, this.michelleFinalShades
+    );
+
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.82, 0.5), dressMaterial);
+    torso.position.set(0, 1.04, 0);
+    const skirt = new THREE.Mesh(new THREE.BoxGeometry(0.88, 0.62, 0.56), dressMaterial);
+    skirt.position.set(0, 0.54, 0);
+    const waistband = new THREE.Mesh(
+      new THREE.BoxGeometry(0.79, 0.08, 0.57),
+      new THREE.MeshStandardMaterial({ color: 0xfef3c7, emissive: 0xf59e0b, emissiveIntensity: 0.28 })
+    );
+    waistband.position.set(0, 0.86, 0);
+
+    const armGeometry = new THREE.BoxGeometry(0.18, 0.64, 0.2);
+    this.michelleLeftArm = new THREE.Mesh(armGeometry, skinMaterial);
+    this.michelleLeftArm.position.set(-0.45, 1.13, 0.08);
+    this.michelleLeftArm.rotation.z = -0.68;
+    this.michelleRightArm = new THREE.Mesh(armGeometry, skinMaterial);
+    this.michelleRightArm.position.set(0.45, 1.13, 0.08);
+    this.michelleRightArm.rotation.z = 0.68;
+
+    const legGeometry = new THREE.BoxGeometry(0.22, 0.58, 0.25);
+    const legLeft = new THREE.Mesh(legGeometry, skinMaterial);
+    legLeft.position.set(-0.17, 0.12, 0);
+    const legRight = new THREE.Mesh(legGeometry, skinMaterial);
+    legRight.position.set(0.17, 0.12, 0);
+
+    this.michelleHalo = new THREE.Mesh(
+      new THREE.TorusGeometry(0.42, 0.035, 8, 36),
+      new THREE.MeshBasicMaterial({ color: 0xfef08a })
+    );
+    this.michelleHalo.position.set(0, 2.43, 0);
+    this.michelleHalo.rotation.x = 1.15;
+
+    this.michelleAvatarGroup.add(
+      this.michelleLeftWing, this.michelleRightWing,
+      hairBack, hairLeft, hairRight, torso, skirt, waistband,
+      this.michelleLeftArm, this.michelleRightArm, legLeft, legRight,
+      this.michelleHeadGroup, this.michelleHalo
+    );
+    this.michelleGroup.add(this.michelleAvatarGroup);
+
+    const heartRing = new THREE.Mesh(
+      new THREE.TorusGeometry(1.68, 0.035, 8, 40),
+      new THREE.MeshBasicMaterial({
+        color: 0xf9a8d4,
+        transparent: true,
+        opacity: 0.5,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      })
+    );
+    heartRing.position.set(0, 1.25, -0.62);
+
+    const nameCanvas = document.createElement('canvas');
+    nameCanvas.width = 512;
+    nameCanvas.height = 128;
+    const nameContext = nameCanvas.getContext('2d');
+    if (nameContext) {
+      nameContext.clearRect(0, 0, nameCanvas.width, nameCanvas.height);
+      nameContext.textAlign = 'center';
+      nameContext.textBaseline = 'middle';
+      nameContext.font = '700 64px sans-serif';
+      nameContext.shadowColor = '#fb7185';
+      nameContext.shadowBlur = 22;
+      nameContext.fillStyle = '#fff1f2';
+      nameContext.fillText('MICHELLE', 256, 66);
+    }
+    const nameTexture = new THREE.CanvasTexture(nameCanvas);
+    nameTexture.colorSpace = THREE.SRGBColorSpace;
+    const nameSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: nameTexture,
+      transparent: true,
+      depthWrite: false
+    }));
+    nameSprite.position.set(0, -0.58, 0.25);
+    nameSprite.scale.set(2.65, 0.66, 1);
+
+    this.michelleGroup.add(heartRing, nameSprite, new THREE.PointLight(0xf472b6, 2.4, 10));
+    this.scene.add(this.michelleGroup);
   }
 
   private buildLEDSignboard(x: number, y: number) {
@@ -715,6 +1188,55 @@ export class RetroPlatformerEngine {
 
   private createStarMesh(index: number, chapter: LetterChapter, x: number, y: number) {
     const starGroup = new THREE.Group();
+
+    if (index === 1) {
+      this.createMushroomMesh(starGroup);
+      const rings: THREE.Mesh[] = [];
+      for (let r = 0; r < 2; r++) {
+        const ringGeo = new THREE.TorusGeometry(1.2 + r * 0.4, 0.04, 8, 32);
+        const ringMat = new THREE.MeshBasicMaterial({
+          color: r === 0 ? 0xef4444 : 0x4ade80,
+          transparent: true,
+          opacity: 0.5 - r * 0.15
+        });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        starGroup.add(ring);
+        rings.push(ring);
+      }
+
+      starGroup.add(new THREE.PointLight(0xfb7185, 1.8, 8));
+      starGroup.position.set(x, y, 0);
+      this.scene.add(starGroup);
+      this.stars.push({ index, mesh: starGroup, collected: false, x, y, rings, chapter });
+      return;
+    }
+
+    if (index === 3 || chapter.id === 3) {
+      const rings = this.createMagicDumbbellCollectible(starGroup);
+      starGroup.add(new THREE.PointLight(0x22d3ee, 2.4, 10));
+      starGroup.position.set(x, y, 0);
+      this.scene.add(starGroup);
+      this.stars.push({ index, mesh: starGroup, collected: false, x, y, rings, chapter });
+      return;
+    }
+
+    if (index === 4 || chapter.id === 4) {
+      const rings = this.createCelestialHeartCollectible(starGroup);
+      starGroup.add(new THREE.PointLight(0xfef08a, 3.2, 13));
+      starGroup.position.set(x, y, 0);
+      this.scene.add(starGroup);
+      this.stars.push({ index, mesh: starGroup, collected: false, x, y, rings, chapter });
+      return;
+    }
+
+    if (index === 5 || chapter.id === 5 || chapter.specialEffect === 'leaves-canada') {
+      const rings = this.createMagicMapleCollectible(starGroup);
+      starGroup.add(new THREE.PointLight(0xef4444, 2.8, 11));
+      starGroup.position.set(x, y, 0);
+      this.scene.add(starGroup);
+      this.stars.push({ index, mesh: starGroup, collected: false, x, y, rings, chapter });
+      return;
+    }
 
     // 5-pointed crystalline star 3D shape with beveled edges
     const shape = new THREE.Shape();
@@ -786,6 +1308,322 @@ export class RetroPlatformerEngine {
       rings,
       chapter
     });
+  }
+
+  private createMagicDumbbellCollectible(group: THREE.Group): THREE.Mesh[] {
+    const steelMat = new THREE.MeshStandardMaterial({
+      color: 0xe2e8f0,
+      emissive: 0x0891b2,
+      emissiveIntensity: 0.48,
+      metalness: 0.95,
+      roughness: 0.12
+    });
+    const plateMat = new THREE.MeshStandardMaterial({
+      color: 0x0f766e,
+      emissive: 0x22d3ee,
+      emissiveIntensity: 0.72,
+      metalness: 0.72,
+      roughness: 0.2,
+      flatShading: true
+    });
+    const accentMat = new THREE.MeshStandardMaterial({
+      color: 0xa3e635,
+      emissive: 0x65a30d,
+      emissiveIntensity: 0.8,
+      metalness: 0.55,
+      roughness: 0.18
+    });
+
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 1.55, 12), steelMat);
+    bar.rotation.z = Math.PI / 2;
+    group.add(bar);
+
+    const plateGeo = new THREE.CylinderGeometry(0.43, 0.43, 0.3, 8);
+    const plateLeft = new THREE.Mesh(plateGeo, plateMat);
+    plateLeft.rotation.z = Math.PI / 2;
+    plateLeft.position.x = -0.72;
+    const plateRight = new THREE.Mesh(plateGeo, plateMat);
+    plateRight.rotation.z = Math.PI / 2;
+    plateRight.position.x = 0.72;
+
+    const collarGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.12, 10);
+    const collarLeft = new THREE.Mesh(collarGeo, accentMat);
+    collarLeft.rotation.z = Math.PI / 2;
+    collarLeft.position.x = -0.51;
+    const collarRight = new THREE.Mesh(collarGeo, accentMat);
+    collarRight.rotation.z = Math.PI / 2;
+    collarRight.position.x = 0.51;
+    group.add(plateLeft, plateRight, collarLeft, collarRight);
+
+    // Floating energy sparks make the gym item feel like a magical reward.
+    for (let i = 0; i < 6; i++) {
+      const spark = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.095 + (i % 2) * 0.035, 0),
+        new THREE.MeshBasicMaterial({
+          color: i % 2 === 0 ? 0x67e8f9 : 0xd9f99d,
+          transparent: true,
+          opacity: 0.86,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+      const angle = (i / 6) * Math.PI * 2;
+      spark.position.set(Math.cos(angle) * 1.15, Math.sin(angle) * 0.7, 0.18);
+      group.add(spark);
+    }
+
+    const rings: THREE.Mesh[] = [];
+    [0x22d3ee, 0xa3e635].forEach((color, ringIndex) => {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(1.22 + ringIndex * 0.34, 0.045, 8, 36),
+        new THREE.MeshBasicMaterial({
+          color,
+          transparent: true,
+          opacity: 0.52 - ringIndex * 0.14,
+          blending: THREE.AdditiveBlending
+        })
+      );
+      ring.rotation.x = ringIndex * 0.55;
+      group.add(ring);
+      rings.push(ring);
+    });
+
+    return rings;
+  }
+
+  private createCelestialHeartCollectible(group: THREE.Group): THREE.Mesh[] {
+    const heartShape = new THREE.Shape();
+    heartShape.moveTo(0, -0.9);
+    heartShape.bezierCurveTo(-0.18, -0.62, -1.02, -0.05, -1.02, 0.55);
+    heartShape.bezierCurveTo(-1.02, 1.18, -0.22, 1.34, 0, 0.75);
+    heartShape.bezierCurveTo(0.22, 1.34, 1.02, 1.18, 1.02, 0.55);
+    heartShape.bezierCurveTo(1.02, -0.05, 0.18, -0.62, 0, -0.9);
+    heartShape.closePath();
+
+    const heartGeo = new THREE.ExtrudeGeometry(heartShape, {
+      depth: 0.34,
+      bevelEnabled: true,
+      bevelSegments: 4,
+      steps: 1,
+      bevelSize: 0.1,
+      bevelThickness: 0.1
+    });
+    heartGeo.center();
+
+    const glowHeart = new THREE.Mesh(
+      heartGeo,
+      new THREE.MeshBasicMaterial({
+        color: 0xfef08a,
+        transparent: true,
+        opacity: 0.24,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      })
+    );
+    glowHeart.scale.setScalar(1.27);
+    glowHeart.position.z = -0.1;
+
+    const heart = new THREE.Mesh(
+      heartGeo,
+      new THREE.MeshStandardMaterial({
+        color: 0xfff7ed,
+        emissive: 0xf59e0b,
+        emissiveIntensity: 1.05,
+        metalness: 0.62,
+        roughness: 0.14
+      })
+    );
+    heart.castShadow = true;
+    group.add(glowHeart, heart);
+
+    // Cross-shaped heavenly rays echo the guardian lights of Gregorio and Victoria.
+    const rayMaterial = new THREE.MeshBasicMaterial({
+      color: 0xfef3c7,
+      transparent: true,
+      opacity: 0.28,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const horizontalRay = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 0.13), rayMaterial);
+    horizontalRay.position.z = -0.18;
+    const verticalRay = new THREE.Mesh(new THREE.PlaneGeometry(0.13, 4.4), rayMaterial);
+    verticalRay.position.z = -0.18;
+    group.add(horizontalRay, verticalRay);
+
+    const rings: THREE.Mesh[] = [];
+    [0xfef08a, 0xffedd5, 0xffffff].forEach((color, ringIndex) => {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(1.28 + ringIndex * 0.3, 0.035, 8, 40),
+        new THREE.MeshBasicMaterial({
+          color,
+          transparent: true,
+          opacity: 0.5 - ringIndex * 0.11,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+      ring.rotation.x = ringIndex * 0.38;
+      group.add(ring);
+      rings.push(ring);
+    });
+
+    for (let i = 0; i < 8; i++) {
+      const sparkle = new THREE.Mesh(
+        new THREE.OctahedronGeometry(i % 3 === 0 ? 0.14 : 0.085, 0),
+        new THREE.MeshBasicMaterial({
+          color: i % 2 === 0 ? 0xffffff : 0xfef08a,
+          transparent: true,
+          opacity: 0.9,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+      const angle = (i / 8) * Math.PI * 2;
+      sparkle.position.set(Math.cos(angle) * 1.65, Math.sin(angle) * 1.25, 0.22);
+      group.add(sparkle);
+    }
+
+    return rings;
+  }
+
+  private createMagicMapleCollectible(group: THREE.Group): THREE.Mesh[] {
+    // Stylized Canadian maple silhouette, extruded like the other magical rewards.
+    const mapleShape = new THREE.Shape();
+    const outline: Array<[number, number]> = [
+      [0, 1.18], [-0.17, 0.72], [-0.42, 0.9], [-0.35, 0.48],
+      [-0.82, 0.68], [-0.62, 0.24], [-1.06, 0.31], [-0.69, -0.06],
+      [-0.86, -0.25], [-0.3, -0.18], [-0.36, -0.62], [-0.11, -0.48],
+      [-0.11, -1.08], [0.11, -1.08], [0.11, -0.48], [0.36, -0.62],
+      [0.3, -0.18], [0.86, -0.25], [0.69, -0.06], [1.06, 0.31],
+      [0.62, 0.24], [0.82, 0.68], [0.35, 0.48], [0.42, 0.9],
+      [0.17, 0.72]
+    ];
+    mapleShape.moveTo(outline[0][0], outline[0][1]);
+    for (let i = 1; i < outline.length; i++) {
+      mapleShape.lineTo(outline[i][0], outline[i][1]);
+    }
+    mapleShape.closePath();
+
+    const mapleGeo = new THREE.ExtrudeGeometry(mapleShape, {
+      depth: 0.32,
+      bevelEnabled: true,
+      bevelSegments: 3,
+      steps: 1,
+      bevelSize: 0.075,
+      bevelThickness: 0.08
+    });
+    mapleGeo.center();
+
+    const outerGlow = new THREE.Mesh(
+      mapleGeo,
+      new THREE.MeshBasicMaterial({
+        color: 0xfca5a5,
+        transparent: true,
+        opacity: 0.3,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      })
+    );
+    outerGlow.scale.setScalar(1.26);
+    outerGlow.position.z = -0.12;
+
+    const mapleLeaf = new THREE.Mesh(
+      mapleGeo,
+      new THREE.MeshStandardMaterial({
+        color: 0xef4444,
+        emissive: 0xdc2626,
+        emissiveIntensity: 0.88,
+        metalness: 0.68,
+        roughness: 0.16,
+        flatShading: true
+      })
+    );
+    mapleLeaf.castShadow = true;
+    group.add(outerGlow, mapleLeaf);
+
+    // Bright central vein gives the leaf a crisp, recognizable maple detail.
+    const veinMaterial = new THREE.MeshBasicMaterial({
+      color: 0xfff7ed,
+      transparent: true,
+      opacity: 0.72,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const centerVein = new THREE.Mesh(new THREE.PlaneGeometry(0.035, 1.72), veinMaterial);
+    centerVein.position.set(0, -0.05, 0.27);
+    group.add(centerVein);
+
+    const rings: THREE.Mesh[] = [];
+    [0xef4444, 0xffffff, 0xfbbf24].forEach((color, ringIndex) => {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(1.3 + ringIndex * 0.3, 0.038, 8, 40),
+        new THREE.MeshBasicMaterial({
+          color,
+          transparent: true,
+          opacity: 0.5 - ringIndex * 0.1,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+      ring.rotation.x = ringIndex * 0.45;
+      group.add(ring);
+      rings.push(ring);
+    });
+
+    for (let i = 0; i < 7; i++) {
+      const sparkle = new THREE.Mesh(
+        new THREE.OctahedronGeometry(i % 3 === 0 ? 0.13 : 0.08, 0),
+        new THREE.MeshBasicMaterial({
+          color: i % 2 === 0 ? 0xffffff : 0xfbbf24,
+          transparent: true,
+          opacity: 0.88,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+        })
+      );
+      const angle = (i / 7) * Math.PI * 2;
+      sparkle.position.set(Math.cos(angle) * 1.62, Math.sin(angle) * 1.18, 0.22);
+      group.add(sparkle);
+    }
+
+    return rings;
+  }
+
+  private createMushroomMesh(mushroomGroup: THREE.Group) {
+    const stemMat = new THREE.MeshStandardMaterial({
+      color: 0xfff7ed,
+      roughness: 0.8
+    });
+    const capMat = new THREE.MeshStandardMaterial({
+      color: 0xdc2626,
+      emissive: 0x7f1d1d,
+      emissiveIntensity: 0.18,
+      roughness: 0.35
+    });
+    const spotMat = new THREE.MeshStandardMaterial({ color: 0xfff7ed, roughness: 0.65 });
+
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.44, 0.82, 18), stemMat);
+    stem.position.y = -0.32;
+    stem.castShadow = true;
+
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 14, 0, Math.PI * 2, 0, Math.PI / 2), capMat);
+    cap.scale.y = 0.62;
+    cap.position.y = 0.18;
+    cap.castShadow = true;
+
+    const spots = [
+      { x: -0.42, y: 0.52, z: 0.53, scale: 0.18 },
+      { x: 0.42, y: 0.52, z: 0.53, scale: 0.16 },
+      { x: 0, y: 0.72, z: 0.08, scale: 0.14 }
+    ];
+    spots.forEach(({ x, y, z, scale }) => {
+      const spot = new THREE.Mesh(new THREE.SphereGeometry(scale, 12, 8), spotMat);
+      spot.position.set(x, y, z);
+      mushroomGroup.add(spot);
+    });
+
+    mushroomGroup.add(stem, cap);
   }
 
   private createEasterEggMesh(data: EasterEgg, x: number, y: number) {
@@ -1076,6 +1914,115 @@ export class RetroPlatformerEngine {
     );
 
     this.scene.add(this.parentOrbA, this.parentOrbB);
+  }
+
+  private buildParentConstellations() {
+    this.parentConstellationsGroup = new THREE.Group();
+    this.parentConstellationsGroup.position.set(116, 26.4, -2.6);
+    this.parentConstellationsGroup.visible = false;
+
+    // A compact 5 × 7 star alphabet keeps both names readable as true constellations.
+    const starAlphabet: Record<string, string[]> = {
+      A: ['01110', '10001', '10001', '11111', '10001', '10001', '10001'],
+      C: ['01111', '10000', '10000', '10000', '10000', '10000', '01111'],
+      E: ['11111', '10000', '10000', '11110', '10000', '10000', '11111'],
+      G: ['01111', '10000', '10000', '10111', '10001', '10001', '01111'],
+      I: ['11111', '00100', '00100', '00100', '00100', '00100', '11111'],
+      O: ['01110', '10001', '10001', '10001', '10001', '10001', '01110'],
+      R: ['11110', '10001', '10001', '11110', '10100', '10010', '10001'],
+      T: ['11111', '00100', '00100', '00100', '00100', '00100', '00100'],
+      V: ['10001', '10001', '10001', '10001', '10001', '01010', '00100']
+    };
+    const constellationStarGeometry = new THREE.OctahedronGeometry(0.095, 0);
+
+    const createConstellationName = (name: string, color: number, y: number, phaseOffset: number) => {
+      const nameGroup = new THREE.Group();
+      const unit = 0.34;
+      const letterAdvance = 6;
+      const totalColumns = name.length * letterAdvance - 1;
+      const linePositions: number[] = [];
+
+      for (let letterIndex = 0; letterIndex < name.length; letterIndex++) {
+        const pattern = starAlphabet[name[letterIndex]];
+        if (!pattern) continue;
+
+        for (let row = 0; row < pattern.length; row++) {
+          for (let column = 0; column < pattern[row].length; column++) {
+            if (pattern[row][column] !== '1') continue;
+
+            const x = (letterIndex * letterAdvance + column - totalColumns / 2) * unit;
+            const pointY = (3 - row) * unit;
+            const starMaterial = new THREE.MeshBasicMaterial({
+              color,
+              transparent: true,
+              opacity: 0,
+              blending: THREE.AdditiveBlending,
+              depthWrite: false
+            });
+            const star = new THREE.Mesh(constellationStarGeometry, starMaterial);
+            star.position.set(x, pointY, 0);
+            nameGroup.add(star);
+            this.constellationStars.push({
+              mesh: star,
+              phase: phaseOffset + letterIndex * 0.7 + row * 0.35 + column * 0.22
+            });
+
+            // Connect neighboring stars inside each letter to create constellation lines.
+            if (column < pattern[row].length - 1 && pattern[row][column + 1] === '1') {
+              linePositions.push(x, pointY, 0, x + unit, pointY, 0);
+            }
+            if (row < pattern.length - 1 && pattern[row + 1][column] === '1') {
+              linePositions.push(x, pointY, 0, x, pointY - unit, 0);
+            }
+          }
+        }
+      }
+
+      const lineGeometry = new THREE.BufferGeometry();
+      lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
+      const lineMaterial = new THREE.LineBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      const constellationLines = new THREE.LineSegments(lineGeometry, lineMaterial);
+      nameGroup.add(constellationLines);
+      this.constellationLineMaterials.push(lineMaterial);
+      nameGroup.position.y = y;
+      this.parentConstellationsGroup.add(nameGroup);
+    };
+
+    // Gregorio shines in pearl-white; Victoria in warm, golden starlight.
+    createConstellationName('GREGORIO', 0xfff7ed, 2.45, 0);
+    createConstellationName('VICTORIA', 0xfef08a, -2.45, Math.PI);
+
+    // A small heart-shaped constellation joins both names.
+    const heartPoints = [
+      [-0.52, 0.2], [-0.3, 0.48], [0, 0.25], [0.3, 0.48], [0.52, 0.2],
+      [0.42, -0.12], [0, -0.58], [-0.42, -0.12], [-0.52, 0.2]
+    ];
+    const heartPositions: number[] = [];
+    for (let i = 0; i < heartPoints.length - 1; i++) {
+      heartPositions.push(
+        heartPoints[i][0], heartPoints[i][1], 0,
+        heartPoints[i + 1][0], heartPoints[i + 1][1], 0
+      );
+    }
+    const heartMaterial = new THREE.LineBasicMaterial({
+      color: 0xfef3c7,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const heartGeometry = new THREE.BufferGeometry();
+    heartGeometry.setAttribute('position', new THREE.Float32BufferAttribute(heartPositions, 3));
+    this.parentConstellationsGroup.add(new THREE.LineSegments(heartGeometry, heartMaterial));
+    this.constellationLineMaterials.push(heartMaterial);
+
+    this.scene.add(this.parentConstellationsGroup);
   }
 
   private buildMainstageArch(x: number, y: number) {
@@ -1511,11 +2458,133 @@ export class RetroPlatformerEngine {
     }
   }
 
+  private unlockBrotherCompanion() {
+    if (this.brotherUnlocked) return;
+    this.brotherUnlocked = true;
+
+    // Materialize just behind Jonathan, ready to follow him through the level.
+    this.brotherPos.x = this.playerGroup.position.x - this.facing * 1.35;
+    this.brotherPos.y = this.playerGroup.position.y;
+    this.brotherGroup.position.set(this.brotherPos.x, this.brotherPos.y, 0.55);
+    this.brotherGroup.rotation.y = this.playerGroup.rotation.y;
+    this.brotherGroup.visible = true;
+    this.brotherShadow.visible = true;
+  }
+
+  private unlockMichelleReward() {
+    if (this.michelleUnlocked) return;
+    this.michelleUnlocked = true;
+    this.michelleGroup.visible = true;
+    playStarSound();
+    this.callbacks.onMichelleUnlocked?.();
+  }
+
+  private updateBrotherCompanion(delta: number, time: number) {
+    if (!this.brotherUnlocked) return;
+
+    if (this.isFinalSetDJing) {
+      const stageBeat = time * (124 / 60) * Math.PI;
+      const bounce = Math.abs(Math.sin(stageBeat * 2));
+      const sway = Math.sin(stageBeat);
+
+      // Dance at Jonathan's left side while he works the final mixer.
+      this.brotherPos.x = 156.55;
+      this.brotherPos.y = 9.5;
+      this.brotherGroup.position.set(156.55, 9.5 + bounce * 0.1, 0.12);
+      this.brotherGroup.rotation.y = 0.15;
+      this.brotherGroup.rotation.z = sway * 0.075;
+      this.brotherLeftLeg.rotation.x = sway * 0.28;
+      this.brotherRightLeg.rotation.x = -sway * 0.28;
+      this.brotherLeftArm.rotation.x = -0.78 + sway * 0.88;
+      this.brotherRightArm.rotation.x = -0.78 - sway * 0.88;
+      this.brotherLeftArm.rotation.z = -0.3 - sway * 0.16;
+      this.brotherRightArm.rotation.z = 0.3 + sway * 0.16;
+      this.brotherHead.rotation.x = -0.08 + Math.sin(stageBeat * 2) * 0.18;
+      this.brotherHead.rotation.z = sway * 0.12;
+      this.brotherShadow.visible = false;
+      return;
+    }
+
+    const leaderX = this.playerGroup.position.x;
+    const leaderY = this.playerGroup.position.y;
+    const targetX = leaderX - this.facing * 1.35;
+    const targetY = leaderY + (this.isFlying ? -0.12 : 0);
+    const previousX = this.brotherPos.x;
+
+    // Exponential smoothing gives the brother a small, natural following delay.
+    const horizontalFollow = 1 - Math.exp(-delta * 6.8);
+    const verticalFollow = 1 - Math.exp(-delta * 9.5);
+    this.brotherPos.x += (targetX - this.brotherPos.x) * horizontalFollow;
+    this.brotherPos.y += (targetY - this.brotherPos.y) * verticalFollow;
+
+    const followSpeed = Math.abs(this.brotherPos.x - previousX) / Math.max(delta, 0.001);
+    const stride = time * 13.5;
+    const airborne = Math.abs(this.brotherPos.y - targetY) > 0.28 || !this.isGrounded;
+
+    this.brotherGroup.position.set(this.brotherPos.x, this.brotherPos.y, 0.55);
+    this.brotherGroup.rotation.y = this.facing === 1 ? Math.PI * 0.15 : -Math.PI * 0.85;
+
+    if (airborne) {
+      this.brotherLeftLeg.rotation.x = -0.42;
+      this.brotherRightLeg.rotation.x = 0.34;
+      this.brotherLeftArm.rotation.x = 0.78;
+      this.brotherRightArm.rotation.x = -0.9;
+      this.brotherLeftArm.rotation.z = -0.12;
+      this.brotherRightArm.rotation.z = 0.12;
+      this.brotherHead.rotation.x = -0.08;
+      this.brotherHead.rotation.z = 0;
+      this.brotherGroup.rotation.z = -this.facing * 0.08;
+    } else if (followSpeed > 0.45) {
+      this.brotherLeftLeg.rotation.x = Math.sin(stride) * 0.62;
+      this.brotherRightLeg.rotation.x = -Math.sin(stride) * 0.62;
+      this.brotherLeftArm.rotation.x = -Math.sin(stride) * 0.72 - 0.12;
+      this.brotherRightArm.rotation.x = Math.sin(stride) * 0.72 - 0.12;
+      this.brotherLeftArm.rotation.z = -0.08;
+      this.brotherRightArm.rotation.z = 0.08;
+      this.brotherHead.rotation.x = Math.sin(stride) * 0.1;
+      this.brotherHead.rotation.z = 0;
+      this.brotherGroup.rotation.z = 0;
+    } else {
+      // Dance to the same 124 BPM house beat as Jonathan, curling both dumbbells.
+      const danceTime = time * (124 / 60) * Math.PI;
+      const beat = Math.sin(danceTime);
+      const halfBeat = Math.sin(danceTime * 0.5);
+      this.brotherLeftLeg.rotation.x = beat * 0.25;
+      this.brotherRightLeg.rotation.x = -beat * 0.25;
+      this.brotherLeftArm.rotation.x = -0.72 + beat * 0.82;
+      this.brotherRightArm.rotation.x = -0.72 - beat * 0.82;
+      this.brotherLeftArm.rotation.z = -0.28 - halfBeat * 0.15;
+      this.brotherRightArm.rotation.z = 0.28 + halfBeat * 0.15;
+      this.brotherHead.rotation.x = -0.06 + Math.sin(danceTime * 2) * 0.17;
+      this.brotherHead.rotation.z = beat * 0.1;
+      this.brotherGroup.rotation.z = halfBeat * 0.055;
+    }
+
+    // Keep a smaller shadow beneath him, including while following through jumps.
+    let groundBelow = -10;
+    for (const p of this.platforms) {
+      const pLeft = p.x - p.width / 2;
+      const pRight = p.x + p.width / 2;
+      if (this.brotherPos.x >= pLeft && this.brotherPos.x <= pRight && p.y <= this.brotherPos.y + 0.1) {
+        if (p.y > groundBelow) groundBelow = p.y;
+      }
+    }
+
+    this.brotherShadow.visible = groundBelow > -9;
+    this.brotherShadow.position.set(this.brotherPos.x, groundBelow + 0.05, 0.5);
+    const distanceToGround = Math.max(0, this.brotherPos.y - groundBelow);
+    const shadowScale = Math.max(0.25, 0.78 - distanceToGround * 0.08);
+    this.brotherShadow.scale.set(shadowScale, shadowScale, shadowScale);
+    (this.brotherShadow.material as THREE.MeshBasicMaterial).opacity = Math.max(0.1, 0.34 - distanceToGround * 0.05);
+  }
+
   public unlockFlightPower() {
     if (this.canFly) return;
     this.canFly = true;
     this.flightWingsGroup.visible = true;
     this.guardianOrbsGroup.visible = true;
+    this.constellationReveal = 0;
+    this.parentConstellationsGroup.visible = true;
 
     // Celestial angelic fanfare sound
     playCelestialFanfare();
@@ -1760,6 +2829,10 @@ export class RetroPlatformerEngine {
         // Check if Star 2 ("El hombre en el que te convertiste"): trigger DJ Evolution!
         if (star.index === 2 || star.chapter.id === 2 || star.chapter.specialEffect === 'dj-evolution') {
           this.evolveToSuperDJ();
+        } else if (star.index === 3 || star.chapter.id === 3) {
+          // Chapter 3 ("Los Hermanos"): his gym-loving little brother joins the adventure.
+          this.unlockBrotherCompanion();
+          playStarSound();
         } else if (star.index === 4 || star.chapter.id === 4 || star.chapter.specialEffect === 'celestial-flight') {
           // Chapter 4 ("Dos Luces en el Cielo" - Mamá y Papá): Super Poder de Vuelo Celestial!
           this.unlockFlightPower();
@@ -1770,6 +2843,28 @@ export class RetroPlatformerEngine {
         star.mesh.visible = false;
         this.callbacks.onStarCollect(star.index, star.chapter, this.isSuperDJ, this.canFly);
         break;
+      }
+    }
+
+    // Colored vinyls are a lighter, optional collection path: no modal or pause.
+    for (const disc of this.musicDiscs) {
+      if (disc.collected) continue;
+
+      const dx = this.playerPos.x - disc.x;
+      const dy = (this.playerPos.y + 1) - disc.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < 1.08) {
+        disc.collected = true;
+        disc.mesh.visible = false;
+        this.collectedDiscCount++;
+        this.callbacks.onDiscCountUpdate?.(this.collectedDiscCount);
+
+        if (this.collectedDiscCount === this.musicDiscs.length) {
+          this.unlockMichelleReward();
+        } else {
+          playEasterEggSound();
+        }
       }
     }
 
@@ -1934,6 +3029,12 @@ export class RetroPlatformerEngine {
       this.headphonesGroup.visible = true;
     }
 
+    // Bring the whole trio to the booth and give the companions their festival shades.
+    this.brotherGroup.visible = true;
+    this.brotherFinalShades.visible = true;
+    this.michelleGroup.visible = true;
+    this.michelleFinalShades.visible = true;
+
     // Crank up SoundCloud volume to 100% full live set
     setSoundCloudVolume(100);
   }
@@ -1950,7 +3051,24 @@ export class RetroPlatformerEngine {
     // Rotate spinning golden stars and soundwave rings
     for (const star of this.stars) {
       if (!star.collected) {
-        star.mesh.rotation.y += 0.035;
+        if (star.index === 4) {
+          // Keep the heart facing the camera while it gently floats and breathes.
+          star.mesh.rotation.y = Math.sin(time * 1.3) * 0.2;
+          star.mesh.rotation.z = Math.sin(time * 1.8) * 0.035;
+          const heartPulse = 1 + Math.sin(time * 3.6) * 0.055;
+          star.mesh.scale.setScalar(heartPulse);
+        } else if (star.index === 5) {
+          // The maple leaf drifts softly while remaining readable from the side view.
+          star.mesh.rotation.y = Math.sin(time * 1.15) * 0.26;
+          star.mesh.rotation.z = Math.sin(time * 1.65) * 0.1;
+          const maplePulse = 1 + Math.sin(time * 3.1) * 0.045;
+          star.mesh.scale.setScalar(maplePulse);
+        } else {
+          star.mesh.rotation.y += 0.035;
+          if (star.index === 3) {
+            star.mesh.rotation.z = Math.sin(time * 2.4) * 0.09;
+          }
+        }
         star.mesh.position.y = star.y + Math.sin(time * 3 + star.index) * 0.22;
         star.rings.forEach((ring, rIdx) => {
           ring.rotation.z += 0.02 * (rIdx === 0 ? 1 : -1);
@@ -1958,6 +3076,55 @@ export class RetroPlatformerEngine {
           ring.scale.set(scale, scale, scale);
         });
       }
+    }
+
+    // Secondary vinyls spin and shimmer more subtly than the letter collectibles.
+    for (const disc of this.musicDiscs) {
+      if (!disc.collected) {
+        disc.mesh.rotation.z += 0.045;
+        disc.mesh.rotation.y = Math.sin(time * 1.8 + disc.index) * 0.18;
+        disc.mesh.position.y = disc.y + Math.sin(time * 3 + disc.index) * 0.12;
+        const pulse = 1 + Math.sin(time * 4 + disc.index) * 0.08;
+        disc.ring.scale.setScalar(pulse);
+      }
+    }
+
+    // Michelle waits at the romantic reward, then joins the trio at the final booth.
+    if (this.michelleUnlocked || this.isFinalSetDJing) {
+      const heartBaseScale = this.isFinalSetDJing ? 1.15 : 1.58;
+      const glowBaseScale = this.isFinalSetDJing ? 1.34 : 1.82;
+      if (this.isFinalSetDJing) {
+        this.michelleGroup.position.set(159.5, 9.5 + Math.sin(time * 2.1) * 0.06, 0.14);
+        this.michelleGroup.rotation.y = -0.12;
+      } else {
+        this.michelleGroup.position.set(151, 8.15 + Math.sin(time * 2.1) * 0.08, 0.45);
+        this.michelleGroup.rotation.y = 0;
+      }
+      this.michelleHeart.scale.setScalar(heartBaseScale + Math.sin(time * 3.4) * 0.08);
+      this.michelleHeartGlow.scale.setScalar(glowBaseScale + Math.sin(time * 3.4) * 0.12);
+      const danceBeat = Math.sin(time * 5.2);
+      const danceStrength = this.isFinalSetDJing ? 0.42 : 0.28;
+      this.michelleAvatarGroup.position.y = Math.abs(danceBeat) * (this.isFinalSetDJing ? 0.14 : 0.1);
+      this.michelleAvatarGroup.rotation.z = Math.sin(time * 3.2) * (this.isFinalSetDJing ? 0.085 : 0.055);
+      this.michelleLeftArm.rotation.z = -0.68 + danceBeat * danceStrength;
+      this.michelleRightArm.rotation.z = 0.68 + danceBeat * danceStrength;
+      this.michelleLeftArm.rotation.x = Math.sin(time * 7.2) * 0.22;
+      this.michelleRightArm.rotation.x = -Math.sin(time * 7.2) * 0.22;
+      this.michelleLeftWing.rotation.y = Math.sin(time * 4.4) * 0.28;
+      this.michelleRightWing.rotation.y = -Math.sin(time * 4.4) * 0.28;
+      this.michelleHalo.rotation.z += 0.012;
+
+      // Her face gently turns toward Jonathan wherever he is on the stage.
+      const jonathanOffset = this.playerGroup.position.x - this.michelleGroup.position.x;
+      const lookSensitivity = this.isFinalSetDJing ? 0.22 : 0.045;
+      const targetLookAngle = THREE.MathUtils.clamp(jonathanOffset * lookSensitivity, -0.52, 0.52);
+      this.michelleHeadGroup.rotation.y = THREE.MathUtils.lerp(
+        this.michelleHeadGroup.rotation.y,
+        targetLookAngle,
+        0.09
+      );
+      this.michelleHeadGroup.rotation.z = Math.sin(time * 2.6) * 0.035;
+      this.michelleKiss.scale.setScalar(1 + Math.sin(time * 5) * 0.12);
     }
 
     // Animate festival laser beams sweeping across the night sky
@@ -2073,6 +3240,30 @@ export class RetroPlatformerEngine {
       }
     }
 
+    // Gregorio and Victoria gradually appear as Jonathan rises into the sky.
+    if (this.parentConstellationsGroup.visible) {
+      const discoveryHeight = THREE.MathUtils.clamp((this.playerPos.y - 13) / 8, 0, 1);
+      const revealSpeed = discoveryHeight > 0 ? 0.12 + discoveryHeight * 0.9 : 0;
+      this.constellationReveal = Math.max(
+        this.constellationReveal,
+        Math.min(1, this.constellationReveal + delta * revealSpeed)
+      );
+      const revealEase = 1 - Math.pow(1 - this.constellationReveal, 3);
+      this.parentConstellationsGroup.rotation.z = Math.sin(time * 0.35) * 0.008;
+
+      for (const star of this.constellationStars) {
+        const twinkle = 0.78 + Math.sin(time * 3.4 + star.phase) * 0.22;
+        const scale = revealEase * (0.75 + twinkle * 0.5);
+        star.mesh.scale.setScalar(scale);
+        (star.mesh.material as THREE.MeshBasicMaterial).opacity = revealEase * (0.58 + twinkle * 0.42);
+        star.mesh.rotation.z += 0.012;
+      }
+
+      for (const material of this.constellationLineMaterials) {
+        material.opacity = revealEase * (0.22 + discoveryHeight * 0.34);
+      }
+    }
+
     // Flight Wings & Guardian Orbs Animation
     if (this.canFly) {
       // Guardian orbs floating near Jonathan's shoulders
@@ -2174,6 +3365,7 @@ export class RetroPlatformerEngine {
     }
 
     this.updatePhysics(delta, time);
+    this.updateBrotherCompanion(delta, time);
     this.renderer.render(this.scene, this.camera);
   };
 
