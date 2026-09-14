@@ -56,7 +56,7 @@ export const LETTER_CHAPTERS: LetterChapter[] = [
       "Espero de corazón que algún día puedas venir a verme aquí a Canadá y que podamos volver a compartir juntos.",
       "Y como decía la mamá, mi mayor deseo para ti es que seas feliz.",
       "Que pongas tu vida en manos de tu propia felicidad, que sigas escogiendo aquello que te haga bien y que nunca dejes de construir una vida que realmente se sienta tuya.",
-      "Te quiero muchísimo, hermano. Con todo mi amor siempre, de parte de tu hermana Fiorella."
+      "Te quiero muchísimo, hermano."
     ]
   }
 ];

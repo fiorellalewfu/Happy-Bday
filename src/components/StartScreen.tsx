@@ -14,7 +14,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart }) => {
         initial={{ scale: 0.88, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         transition={{ type: 'spring', damping: 22, stiffness: 260 }}
-        className="w-full max-w-lg max-h-[92vh] overflow-y-auto house-panel rounded-3xl p-5 sm:p-6 md:p-8 text-center relative text-slate-100 shadow-2xl"
+        className="w-full max-w-lg house-panel rounded-3xl p-6 md:p-8 text-center relative overflow-hidden text-slate-100"
       >
         {/* Ambient neon light glow */}
         <div className="absolute -top-16 -right-16 w-36 h-36 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />

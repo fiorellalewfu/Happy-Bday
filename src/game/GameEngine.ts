@@ -1731,19 +1731,12 @@ export class RetroPlatformerEngine {
       this.updateHouseDanceAnimation(time, delta);
     }
 
-    // Dynamic Camera tracking with Mobile Portrait & Landscape auto-adaptation
-    const aspect = this.camera.aspect;
-    const isPortrait = aspect < 1.0;
-
-    // In mobile portrait, gently pull back Z and raise Y so player and platforms are clearly visible above touch controls
-    const targetCamZ = isPortrait ? 18.5 * Math.min(1.42, 0.88 / Math.max(0.48, aspect)) : 18.5;
-    const targetCamX = this.playerPos.x + this.facing * (isPortrait ? 0.9 : 1.5);
-    const targetCamY = Math.max(isPortrait ? 5.2 : 4.5, this.playerPos.y + (isPortrait ? 3.2 : 2.5));
-
+    // Dynamic Camera tracking
+    const targetCamX = this.playerPos.x + this.facing * 1.5;
+    const targetCamY = Math.max(4.5, this.playerPos.y + 2.5);
     this.camera.position.x += (targetCamX - this.camera.position.x) * 0.08;
     this.camera.position.y += (targetCamY - this.camera.position.y) * 0.08;
-    this.camera.position.z += (targetCamZ - this.camera.position.z) * 0.08;
-    this.camera.lookAt(this.camera.position.x, this.camera.position.y - (isPortrait ? 1.7 : 1.0), 0);
+    this.camera.lookAt(this.camera.position.x, this.camera.position.y - 1, 0);
 
     // Check Star Intersections
     for (const star of this.stars) {
@@ -1912,12 +1905,10 @@ export class RetroPlatformerEngine {
       this.playerHead.rotation.y = 0;
     }
 
-    // Dynamic DJ Camera Tracking - Festival Mainstage Shot (Mobile Portrait & Landscape)
-    const aspect = this.camera.aspect;
-    const isPortrait = aspect < 1.0;
+    // Dynamic DJ Camera Tracking - Festival Mainstage Shot
     const targetCamX = 158.0 + Math.sin(time * 0.35) * 0.6;
-    const targetCamY = isPortrait ? 11.6 : 11.2;
-    const targetCamZ = isPortrait ? 8.4 : 6.4;
+    const targetCamY = 11.2;
+    const targetCamZ = 6.4;
     this.camera.position.x += (targetCamX - this.camera.position.x) * 0.06;
     this.camera.position.y += (targetCamY - this.camera.position.y) * 0.06;
     this.camera.position.z += (targetCamZ - this.camera.position.z) * 0.06;

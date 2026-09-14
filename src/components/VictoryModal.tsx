@@ -83,7 +83,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ onRestart }) => {
         initial={{ scale: 0.85, opacity: 0, y: 30 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         transition={{ type: 'spring', damping: 20, stiffness: 240 }}
-        className="w-full max-w-2xl max-h-[94vh] overflow-y-auto house-panel rounded-3xl p-4 sm:p-6 md:p-8 text-slate-100 relative my-auto shadow-2xl border border-amber-400/40"
+        className="w-full max-w-2xl house-panel rounded-3xl p-6 md:p-8 text-slate-100 relative my-auto shadow-2xl border border-amber-400/40"
       >
         {/* Header Ribbon */}
         <div className="text-center mb-6">
@@ -107,7 +107,6 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ onRestart }) => {
               <p className="text-sm md:text-base text-slate-300 leading-relaxed">
                 Has recorrido cada plataforma, superado cada salto y alcanzado la cabina del Mainstage.
                 Ahora estás mezclando tu propio Set List en vivo, haciendo vibrar la pista con tu música y pasión inagotable.
-                Con todo mi amor siempre, de parte de tu hermana Fiorella.
               </p>
             </div>
 
@@ -248,7 +247,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ onRestart }) => {
                     Con todo mi amor siempre,
                   </p>
                   <p className="font-semibold text-2xl sm:text-3xl text-stone-900">
-                    De parte de tu hermana Fiorella
+                    Tu hermana
                   </p>
                 </div>
               </div>
