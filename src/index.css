@@ -412,9 +412,20 @@
 
 @media (pointer: coarse), (max-width: 900px) {
   .game-hud [class*="backdrop-blur"],
-  .touch-controls-shell [class*="backdrop-blur"] {
+  .touch-controls-shell [class*="backdrop-blur"],
+  .start-screen-overlay,
+  .letter-modal-overlay,
+  .victory-electronic-overlay,
+  .rotate-device-overlay,
+  .fullscreen-help-overlay {
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
+  }
+
+  .retro-btn,
+  .device-mode-option,
+  .touch-controls-shell button {
+    transition-duration: 70ms;
   }
 }
 

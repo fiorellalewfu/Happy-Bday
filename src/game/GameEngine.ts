@@ -33,6 +33,7 @@ export class RetroPlatformerEngine {
   private physicsAccumulator = 0;
   private readonly pixelRatioCap: number;
   private readonly reducedQuality: boolean;
+  private readonly minimumRenderInterval: number;
   private resizeObserver: ResizeObserver | null = null;
 
   // Player state
@@ -172,7 +173,8 @@ export class RetroPlatformerEngine {
       || window.innerWidth < 900
       || (deviceInfo.deviceMemory ?? 8) <= 4
       || navigator.hardwareConcurrency <= 4;
-    this.pixelRatioCap = this.reducedQuality ? 1 : 1.5;
+    this.pixelRatioCap = this.reducedQuality ? 0.9 : 1.5;
+    this.minimumRenderInterval = this.reducedQuality ? 1 / 32 : 0;
 
     // Scene with deep twilight & electronic sunset festival atmosphere
     this.scene = new THREE.Scene();
@@ -444,8 +446,10 @@ export class RetroPlatformerEngine {
     this.auraPointLight = new THREE.PointLight(0xfacc15, 0, 10);
     this.auraPointLight.position.set(0, 1.6, 0);
 
-    this.superStarAuraGroup.add(this.auraShieldA, this.auraShieldB, this.auraCrownStar, this.auraPointLight);
-    this.playerGroup.add(this.superStarAuraGroup);
+    this.superStarAuraGroup.add(this.auraShieldA, this.auraShieldB, this.auraCrownStar);
+    // Keep the light in the always-visible player group. Changing intensity is
+    // cheap; adding a new light at unlock time forces expensive shader rebuilds.
+    this.playerGroup.add(this.superStarAuraGroup, this.auraPointLight);
 
     // CELESTIAL WINGS OF LIGHT (Unlocked at Star 4 - Dos Luces en el Cielo)
     this.flightWingsGroup = new THREE.Group();
@@ -521,12 +525,7 @@ export class RetroPlatformerEngine {
     const miniOrbMatB = new THREE.MeshBasicMaterial({ color: 0xffedd5 });
 
     this.guardianOrbA = new THREE.Mesh(miniOrbGeo, miniOrbMatA);
-    const miniLightA = new THREE.PointLight(0xfef08a, 1.5, 6);
-    this.guardianOrbA.add(miniLightA);
-
     this.guardianOrbB = new THREE.Mesh(miniOrbGeo, miniOrbMatB);
-    const miniLightB = new THREE.PointLight(0xffedd5, 1.5, 6);
-    this.guardianOrbB.add(miniLightB);
 
     this.guardianOrbsGroup.add(this.guardianOrbA, this.guardianOrbB);
     this.playerGroup.add(this.guardianOrbsGroup);
@@ -954,7 +953,6 @@ export class RetroPlatformerEngine {
 
     group.add(vinyl, label, center, grooveA, grooveB, ring);
     group.position.set(x, y, 0.2);
-    group.add(new THREE.PointLight(color, 0.8, 4));
     this.scene.add(group);
     this.musicDiscs.push({ index, mesh: group, ring, collected: false, x, y });
   }
@@ -1175,7 +1173,7 @@ export class RetroPlatformerEngine {
     nameSprite.position.set(0, -0.58, 0.25);
     nameSprite.scale.set(2.65, 0.66, 1);
 
-    this.michelleGroup.add(heartRing, nameSprite, new THREE.PointLight(0xf472b6, 2.4, 10));
+    this.michelleGroup.add(heartRing, nameSprite);
     this.scene.add(this.michelleGroup);
   }
 
@@ -1226,7 +1224,6 @@ export class RetroPlatformerEngine {
         rings.push(ring);
       }
 
-      starGroup.add(new THREE.PointLight(0xfb7185, 1.8, 8));
       starGroup.position.set(x, y, 0);
       this.scene.add(starGroup);
       this.stars.push({ index, mesh: starGroup, collected: false, x, y, rings, chapter });
@@ -1235,7 +1232,6 @@ export class RetroPlatformerEngine {
 
     if (index === 3 || chapter.id === 3) {
       const rings = this.createMagicDumbbellCollectible(starGroup);
-      starGroup.add(new THREE.PointLight(0x22d3ee, 2.4, 10));
       starGroup.position.set(x, y, 0);
       this.scene.add(starGroup);
       this.stars.push({ index, mesh: starGroup, collected: false, x, y, rings, chapter });
@@ -1244,7 +1240,6 @@ export class RetroPlatformerEngine {
 
     if (index === 4 || chapter.id === 4) {
       const rings = this.createCelestialHeartCollectible(starGroup);
-      starGroup.add(new THREE.PointLight(0xfef08a, 3.2, 13));
       starGroup.position.set(x, y, 0);
       this.scene.add(starGroup);
       this.stars.push({ index, mesh: starGroup, collected: false, x, y, rings, chapter });
@@ -1253,7 +1248,6 @@ export class RetroPlatformerEngine {
 
     if (index === 5 || chapter.id === 5 || chapter.specialEffect === 'leaves-canada') {
       const rings = this.createMagicMapleCollectible(starGroup);
-      starGroup.add(new THREE.PointLight(0xef4444, 2.8, 11));
       starGroup.position.set(x, y, 0);
       this.scene.add(starGroup);
       this.stars.push({ index, mesh: starGroup, collected: false, x, y, rings, chapter });
@@ -1313,10 +1307,6 @@ export class RetroPlatformerEngine {
       starGroup.add(ring);
       rings.push(ring);
     }
-
-    // Dynamic point light
-    const starLight = new THREE.PointLight(0xfef08a, 1.8, 8);
-    starGroup.add(starLight);
 
     starGroup.position.set(x, y, 0);
     this.scene.add(starGroup);
@@ -2479,6 +2469,14 @@ export class RetroPlatformerEngine {
     });
   }
 
+  private deferCollectibleSound(sound: () => void) {
+    // Let the browser paint the collected state/modal before synthesizing the
+    // effect. This prevents AudioContext work from delaying visual feedback.
+    window.requestAnimationFrame(() => {
+      window.setTimeout(sound, 0);
+    });
+  }
+
   public evolveToSuperDJ() {
     if (this.isSuperDJ) return;
     this.isSuperDJ = true;
@@ -2487,7 +2485,7 @@ export class RetroPlatformerEngine {
     this.auraPointLight.intensity = 3.5;
 
     // Mario Super Star / DJ Evolution fanfare
-    playSuperStarEvolutionSound();
+    this.deferCollectibleSound(playSuperStarEvolutionSound);
 
     if (this.callbacks.onEvolution) {
       this.callbacks.onEvolution();
@@ -2511,7 +2509,7 @@ export class RetroPlatformerEngine {
     if (this.michelleUnlocked) return;
     this.michelleUnlocked = true;
     this.michelleGroup.visible = true;
-    playStarSound();
+    this.deferCollectibleSound(playStarSound);
     this.callbacks.onMichelleUnlocked?.();
   }
 
@@ -2623,7 +2621,7 @@ export class RetroPlatformerEngine {
     this.parentConstellationsGroup.visible = true;
 
     // Celestial angelic fanfare sound
-    playCelestialFanfare();
+    this.deferCollectibleSound(playCelestialFanfare);
 
     if (this.callbacks.onFlightUnlocked) {
       this.callbacks.onFlightUnlocked();
@@ -2870,12 +2868,12 @@ export class RetroPlatformerEngine {
         } else if (star.index === 3 || star.chapter.id === 3) {
           // Chapter 3 ("Los Hermanos"): his gym-loving little brother joins the adventure.
           this.unlockBrotherCompanion();
-          playStarSound();
+          this.deferCollectibleSound(playStarSound);
         } else if (star.index === 4 || star.chapter.id === 4 || star.chapter.specialEffect === 'celestial-flight') {
           // Chapter 4 ("Dos Luces en el Cielo" - Mamá y Papá): Super Poder de Vuelo Celestial!
           this.unlockFlightPower();
         } else {
-          playStarSound();
+          this.deferCollectibleSound(playStarSound);
         }
 
         star.mesh.visible = false;
@@ -2901,7 +2899,7 @@ export class RetroPlatformerEngine {
         if (this.collectedDiscCount === this.musicDiscs.length) {
           this.unlockMichelleReward();
         } else {
-          playEasterEggSound();
+          this.deferCollectibleSound(playEasterEggSound);
         }
       }
     }
@@ -2915,7 +2913,7 @@ export class RetroPlatformerEngine {
 
       if (dist < 2.0) {
         egg.found = true;
-        playEasterEggSound();
+        this.deferCollectibleSound(playEasterEggSound);
         this.callbacks.onEasterEggFound(egg.data);
       }
     }
@@ -3084,7 +3082,19 @@ export class RetroPlatformerEngine {
 
   private animate = (frameTime = performance.now()) => {
     this.animationFrameId = requestAnimationFrame(this.animate);
-    const delta = Math.min(Math.max((frameTime - this.lastFrameTime) / 1000, 1 / 240), 0.1);
+
+    // Do not spend GPU time drawing an animated world behind menus or story
+    // overlays. Keeping the timestamp fresh prevents a simulation jump later.
+    if (this.isPaused && !this.isFinalSetDJing) {
+      this.lastFrameTime = frameTime;
+      this.physicsAccumulator = 0;
+      return;
+    }
+
+    const elapsed = (frameTime - this.lastFrameTime) / 1000;
+    if (elapsed < this.minimumRenderInterval) return;
+
+    const delta = Math.min(Math.max(elapsed, 1 / 240), 0.12);
     const frameScale = delta * 60;
     const time = frameTime * 0.001;
     this.lastFrameTime = frameTime;
@@ -3408,7 +3418,7 @@ export class RetroPlatformerEngine {
     // Fixed simulation steps keep movement identical at 60, 30 or even 10 FPS
     // and avoid tunnelling through narrow collectibles on slower browsers.
     const fixedStep = 1 / 60;
-    this.physicsAccumulator = Math.min(this.physicsAccumulator + delta, 0.1);
+    this.physicsAccumulator = Math.min(this.physicsAccumulator + delta, 0.12);
     while (this.physicsAccumulator >= fixedStep) {
       this.updatePhysics(fixedStep, time);
       this.updateBrotherCompanion(fixedStep, time);
