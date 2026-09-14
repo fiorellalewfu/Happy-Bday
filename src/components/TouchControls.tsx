@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ArrowLeft, ArrowRight, ArrowUp } from 'lucide-react';
 
 interface TouchControlsProps {
@@ -7,14 +7,53 @@ interface TouchControlsProps {
 }
 
 export const TouchControls: React.FC<TouchControlsProps> = ({ onControlChange, canFly }) => {
-  const handleTouch = (
+  const callbackRef = useRef(onControlChange);
+  const activeControlsRef = useRef(new Set<'left' | 'right' | 'jump'>());
+
+  useEffect(() => {
+    callbackRef.current = onControlChange;
+  }, [onControlChange]);
+
+  const releaseAllControls = () => {
+    activeControlsRef.current.forEach((control) => {
+      callbackRef.current(control, false);
+    });
+    activeControlsRef.current.clear();
+  };
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) releaseAllControls();
+    };
+
+    window.addEventListener('pointerup', releaseAllControls);
+    window.addEventListener('pointercancel', releaseAllControls);
+    window.addEventListener('blur', releaseAllControls);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      releaseAllControls();
+      window.removeEventListener('pointerup', releaseAllControls);
+      window.removeEventListener('pointercancel', releaseAllControls);
+      window.removeEventListener('blur', releaseAllControls);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  const handlePointer = (
     control: 'left' | 'right' | 'jump',
     active: boolean,
-    e: React.TouchEvent | React.MouseEvent
+    e: React.PointerEvent<HTMLButtonElement>
   ) => {
     e.preventDefault();
     e.stopPropagation();
-    onControlChange(control, active);
+    if (active) {
+      activeControlsRef.current.add(control);
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+    } else {
+      activeControlsRef.current.delete(control);
+    }
+    callbackRef.current(control, active);
   };
 
   return (
@@ -24,12 +63,10 @@ export const TouchControls: React.FC<TouchControlsProps> = ({ onControlChange, c
         <button
           id="btn-touch-left"
           aria-label="Caminar a la izquierda"
-          onTouchStart={(e) => handleTouch('left', true, e)}
-          onTouchEnd={(e) => handleTouch('left', false, e)}
-          onTouchCancel={(e) => handleTouch('left', false, e)}
-          onMouseDown={(e) => handleTouch('left', true, e)}
-          onMouseUp={(e) => handleTouch('left', false, e)}
-          onMouseLeave={(e) => handleTouch('left', false, e)}
+          onPointerDown={(e) => handlePointer('left', true, e)}
+          onPointerUp={(e) => handlePointer('left', false, e)}
+          onPointerCancel={(e) => handlePointer('left', false, e)}
+          onLostPointerCapture={(e) => handlePointer('left', false, e)}
           className="w-16 h-16 sm:w-18 sm:h-18 bg-slate-900/60 active:bg-amber-500/80 backdrop-blur-md rounded-2xl border-2 border-white/40 active:border-white text-white flex items-center justify-center shadow-lg active:scale-90 transition-transform cursor-pointer"
         >
           <ArrowLeft className="w-8 h-8 stroke-[3]" />
@@ -38,12 +75,10 @@ export const TouchControls: React.FC<TouchControlsProps> = ({ onControlChange, c
         <button
           id="btn-touch-right"
           aria-label="Caminar a la derecha"
-          onTouchStart={(e) => handleTouch('right', true, e)}
-          onTouchEnd={(e) => handleTouch('right', false, e)}
-          onTouchCancel={(e) => handleTouch('right', false, e)}
-          onMouseDown={(e) => handleTouch('right', true, e)}
-          onMouseUp={(e) => handleTouch('right', false, e)}
-          onMouseLeave={(e) => handleTouch('right', false, e)}
+          onPointerDown={(e) => handlePointer('right', true, e)}
+          onPointerUp={(e) => handlePointer('right', false, e)}
+          onPointerCancel={(e) => handlePointer('right', false, e)}
+          onLostPointerCapture={(e) => handlePointer('right', false, e)}
           className="w-16 h-16 sm:w-18 sm:h-18 bg-slate-900/60 active:bg-amber-500/80 backdrop-blur-md rounded-2xl border-2 border-white/40 active:border-white text-white flex items-center justify-center shadow-lg active:scale-90 transition-transform cursor-pointer"
         >
           <ArrowRight className="w-8 h-8 stroke-[3]" />
@@ -60,12 +95,10 @@ export const TouchControls: React.FC<TouchControlsProps> = ({ onControlChange, c
         <button
           id="btn-touch-jump"
           aria-label={canFly ? 'Volar y Saltar' : 'Saltar'}
-          onTouchStart={(e) => handleTouch('jump', true, e)}
-          onTouchEnd={(e) => handleTouch('jump', false, e)}
-          onTouchCancel={(e) => handleTouch('jump', false, e)}
-          onMouseDown={(e) => handleTouch('jump', true, e)}
-          onMouseUp={(e) => handleTouch('jump', false, e)}
-          onMouseLeave={(e) => handleTouch('jump', false, e)}
+          onPointerDown={(e) => handlePointer('jump', true, e)}
+          onPointerUp={(e) => handlePointer('jump', false, e)}
+          onPointerCancel={(e) => handlePointer('jump', false, e)}
+          onLostPointerCapture={(e) => handlePointer('jump', false, e)}
           className={`w-20 h-20 sm:w-22 sm:h-22 ${
             canFly
               ? 'bg-gradient-to-tr from-yellow-400 via-amber-300 to-white text-slate-950 shadow-amber-300/60 shadow-2xl border-4 border-yellow-200 animate-pulse'

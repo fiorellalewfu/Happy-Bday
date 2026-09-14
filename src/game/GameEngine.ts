@@ -2358,11 +2358,25 @@ export class RetroPlatformerEngine {
     }
   }
 
+  public releaseAllInputs() {
+    this.input.left = false;
+    this.input.right = false;
+    this.input.jump = false;
+    this.lastJumpPressed = false;
+    this.playerVel.x = 0;
+  }
+
   public setPaused(paused: boolean) {
     this.isPaused = paused;
+    if (paused) {
+      // A modal can replace the mobile controls before touchend fires.
+      this.releaseAllInputs();
+    }
   }
 
   public resumeAfterStar() {
+    // Always resume from neutral input; the player must press a direction again.
+    this.releaseAllInputs();
     this.isPaused = false;
     this.isCelebrating = false;
     // Restore normal SoundCloud volume
